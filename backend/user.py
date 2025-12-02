@@ -6,13 +6,13 @@ class User:
         self.__password = password
         self.__role = role
     
-    def getusername(self):
+    def get_username(self):
         return self.__username
     
-    def getpassword(self):
+    def get_password(self):
         return self.__password
     
-    def getrole(self):
+    def get_role(self):
         return self.__role
 
     def login(self, username, password):
@@ -25,15 +25,15 @@ class User:
             "role": self.role
         }
 
-class Admin(User):
+class admin(User):
     def __init__(self, username, password):
         super().__init__(username, password, "admin")
 
-class Waiter(User):
+class waiter(User):
     def __init__(self, username, password):
         super().__init__(username, password, "waiter")
 
-class Chef(User):
+class chef(User):
     def __init__(self, username, password):
         super().__init__(username, password, "chef")
 
@@ -49,11 +49,11 @@ def load_users(filename="data/users.json"):
             for user_data in data:
                 role = user_data.get("role")
                 if role == "admin":
-                    user = Admin(user_data["username"], user_data["password"])
+                    user = admin(user_data["username"], user_data["password"])
                 elif role == "waiter":
-                    user = Waiter(user_data["username"], user_data["password"])
+                    user = waiter(user_data["username"], user_data["password"])
                 elif role == "chef":
-                    user = Chef(user_data["username"], user_data["password"])
+                    user = chef(user_data["username"], user_data["password"])
                 else:
                     user = User(user_data["username"], user_data["password"], role)
                 users.append(user)
