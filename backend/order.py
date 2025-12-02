@@ -72,7 +72,9 @@ class Order:
             self.DRAFT, self.PENDING, self.PROCESSING,
             self.COMPLETED, self.CANCELLED
         ]
-        
+        # ADDED: Prevent status change if already in a final state
+        if self.status in [self.COMPLETED, self.CANCELLED]:
+            return False
         if new_status not in valid_statuses:
             return False
         
