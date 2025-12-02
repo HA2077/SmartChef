@@ -1,0 +1,23 @@
+               INVOICE / RECEIPT
+==================================================
+Receipt: #RCP-7128F5BB         Order: #ORD-C2471DCA
+Customer: CUST-001
+Date: 2025-12-02 10:22 PM
+==================================================
+Item                   Qty    Price      Total
+--------------------------------------------------
+Laptop                   1 $ 999.99 $   999.99
+Mouse                    3 $  29.99 $    89.97
+Keyboard                 1 $  79.99 $    79.99
+--------------------------------------------------
+Subtotal:                           $   1169.95
+Tax (8.0%):                         $     93.60
+Tip (15.0%):                        $    175.49
+==================================================
+GRAND TOTAL:                        $   1439.04
+==================================================
+Items: 5 | Unique: 3
+Order Status: PROCESSING
+
+Thank you for your purchase!
+Please retain this receipt for your records
