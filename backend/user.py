@@ -1,19 +1,27 @@
-#user classes
 import json
 
-class User:
+class User: 
     def __init__(self, username, password, role):
-        self.username = username
-        self.password = password
-        self.role = role
+        self.__username = username
+        self.__password = password
+        self.__role = role
+    
+    def getusername(self):
+        return self.__username
+    
+    def getpassword(self):
+        return self.__password
+    
+    def getrole(self):
+        return self.__role
 
     def login(self, username, password):
-        return self.username == username and self.password == password
+        return self.__username == username and self.__password == password
 
     def to_dict(self):
-        return {
-            "username": self.username,
-            "password": self.password,
+        return{
+            "username": self.__username,
+            "password": self.__password,
             "role": self.role
         }
 
@@ -52,4 +60,3 @@ def load_users(filename="data/users.json"):
             return users
     except (FileNotFoundError, json.JSONDecodeError):
         return []
-    

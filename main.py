@@ -6,9 +6,8 @@ def main():
         print("No users found. Please create users first.")
         return
 
-    # Attempt to log in as the admin user
-    username = "admin"
-    password = "1234"
+    username = input("Enter your username: ")
+    password = input("Enter your password: ")
 
     loggedInUser = None
     for user in users:
@@ -17,7 +16,7 @@ def main():
             break
             
     if loggedInUser:
-        print(f"Login successful! Welcome, {loggedInUser.username} ({loggedInUser.role}).")
+        print(f"Login successful! Welcome, {loggedInUser.getusername()} ({loggedInUser.getrole()}).")
     else:
         print("Login failed. Invalid username or password.")
 
