@@ -1,19 +1,14 @@
-# DONT Focus ON THAT RNfrom datetime import datetime
 from datetime import datetime
 from typing import List, Dict
 import uuid
-# ADDED: Import Order class for type hinting and usage
 from .order import Order 
 
 
 class Receipt:
-    """Receipt class for generating formal receipts from Orders"""
-    
     SIMPLE = "SIMPLE"
     DETAILED = "DETAILED"
     
-    def __init__(self, order: Order, receipt_id: str = None, # Added type hint for 'order'
-                 tax_rate: float = 0.08, tip_percent: float = 0.0):
+    def __init__(self, order: Order, receipt_id: str = None, tax_rate: float = 0.08, tip_percent: float = 0.0):
         if not order.items:
             raise ValueError("Cannot create receipt for empty order")
         
@@ -104,4 +99,3 @@ class Receipt:
             return self.generate_detailed_receipt()
         else:
             raise ValueError(f"Invalid receipt type: {receipt_type}")
-

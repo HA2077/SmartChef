@@ -4,11 +4,23 @@ from backend.order import Order, OrderItem
 from backend.receipt import Receipt
 import sys
 
-# Global state for simplicity in CLI
 CURRENT_USER = None
 
+MENU_ITEMS = [
+    MenuItem("A1", "Burger", "Food", 15.00),
+    MenuItem("A2", "Pizza", "Food", 21.05),
+    MenuItem("A3", "Pasta", "Food", 12.00),
+    MenuItem("A4", "Koshary", "Food", 13.69),
+    MenuItem("A5", "Shawrama", "Food", 14.15),
+    MenuItem("B1", "Soda", "Drinks", 3.00),
+    MenuItem("B2", "Coffee", "Drinks", 4.50),
+    MenuItem("B3", "Chocolate Milk", "Drinks", 6.67),
+    MenuItem("D1", "Cake", "Dessert", 7.00),
+    MenuItem("D2", "Brownies", "Dessert", 10.44),
+    MenuItem("D3", "Ice Cream", "Dessert", 5.50)
+]
+
 def main_menu():
-    """Displays the main menu and handles user selection."""
     while True:
         print("\n" + "=" * 30)
         print("RESTAURANT MANAGEMENT SYSTEM CLI")
@@ -36,10 +48,9 @@ def main_menu():
             print("Invalid choice. Please try again.")
 
 def login_user():
-    """Handles the user login process."""
     global CURRENT_USER
     
-    users = load_users()  # Load users from data/users.json
+    users = load_users() 
     
     username = input("Enter username: ")
     password = input("Enter password: ")
@@ -53,8 +64,110 @@ def login_user():
     print("\nLOGIN FAILED. Invalid username or password.")
     CURRENT_USER = None
 
+def display_menu():
+    print("\n" + "=" * 60)
+    print("AVAILABLE MENU ITEMS")
+    print("=" * 60)
+    
+    categories = {}
+    for item in MENU_ITEMS:
+        if item.category not in categories:
+            categories[item.category] = []
+        categories[item.category].append(item)
+    
+    for category in sorted(categories.keys()):
+        print(f"\n{category.upper()}:")
+        print("-" * 60)
+        for item in categories[category]:
+            print(f"  {item.id:5} | {item.name:20} | ${item.price:6.2f}")
+    
+    print("=" * 60)
+
+def find_menu_item(item_id):
+    for item in MENU_ITEMS:
+        if item.id == item_id:
+            return item
+    return None
+
+def add_item_to_order(order):
+    display_menu()
+    
+    item_id = input("\nEnter Item ID to add (or 'back' to return): ").strip().upper()
+    
+    if item_id == 'BACK':
+        return
+    
+    menu_item = find_menu_item(item_id)
+    if not menu_item:
+        print(f"ERROR: Item ID '{item_id}' not found.")
+        return
+    
+    try:
+        quantity = int(input(f"Enter quantity for {menu_item.name}: "))
+        if quantity <= 0:
+            print("ERROR: Quantity must be greater than 0.")
+            return
+        
+        if order.add_item(menu_item.id, menu_item.name, menu_item.price, quantity):
+            print(f"✓ Added {quantity}x {menu_item.name} @ ${menu_item.price:.2f} each")
+        else:
+            print("ERROR: Failed to add item to order.")
+    except ValueError:
+        print("ERROR: Invalid quantity. Please enter a number.")
+
+def remove_item_from_order(order):
+    if not order.items:
+        print("ERROR: Order is empty. Nothing to remove.")
+        return
+    
+    print("\nCURRENT ORDER ITEMS:")
+    print("-" * 60)
+    for i, item in enumerate(order.items, 1):
+        print(f"  {i}. {item.name:20} | Qty: {item.quantity:2} | ${item.price:6.2f} each | Subtotal: ${item.subtotal:.2f}")
+    
+    try:
+        item_index = int(input("\nEnter item number to remove (or 0 to cancel): "))
+        
+        if item_index == 0:
+            return
+        
+        if 1 <= item_index <= len(order.items):
+            item_to_remove = order.items[item_index - 1]
+            remove_qty = input(f"Remove all {item_to_remove.quantity}x {item_to_remove.name}? (yes/no): ").strip().lower()
+            
+            if remove_qty == 'yes':
+                if order.remove_item(item_to_remove.product_id):
+                    print(f"✓ Removed {item_to_remove.name} from order.")
+            else:
+                qty_input = input("Enter quantity to remove: ")
+                qty = int(qty_input)
+                if qty > 0:
+                    if order.remove_item(item_to_remove.product_id, qty):
+                        print(f"✓ Removed {qty}x {item_to_remove.name} from order.")
+        else:
+            print("ERROR: Invalid item number.")
+    except ValueError:
+        print("ERROR: Invalid input. Please enter a number.")
+
+def view_order_summary(order):
+    if not order.items:
+        print("\nOrder is empty.")
+        return
+    
+    print("\n" + "=" * 60)
+    print(f"ORDER SUMMARY - {order.order_id}")
+    print("=" * 60)
+    print(f"Status: {order.status}")
+    print("-" * 60)
+    
+    for item in order.items:
+        print(f"{item.name:20} | Qty: {item.quantity:2} | ${item.price:6.2f} x {item.quantity} | ${item.subtotal:8.2f}")
+    
+    print("-" * 60)
+    print(f"{'TOTAL':20} | {' ' * 22} | ${order.get_total():8.2f}")
+    print("=" * 60)
+
 def run_pos_cli():
-    """Simulates the POS system interface."""
     global CURRENT_USER
     if not CURRENT_USER or CURRENT_USER.get_role() != "waiter":
         print("\nACCESS DENIED. You must log in as a WAITER to use the POS system.")
@@ -63,33 +176,61 @@ def run_pos_cli():
     print("\n--- POS System ---")
     print(f"Welcome, {CURRENT_USER.get_username()}!")
     
-    # --- Example POS Workflow ---
-    table_id = input("Enter Table ID/Customer ID for new order: ")
+    table_id = input("Enter Table ID/Customer ID for new order: ").strip()
+    if not table_id:
+        print("ERROR: Table ID cannot be empty.")
+        return
+    
     current_order = Order(customer_id=table_id)
     
-    # Dummy Menu Items for testing (replace with actual loading later)
-    item_a = MenuItem("A1", "Burger", "Food", 15.00)
-    item_b = MenuItem("B1", "Soda", "Drinks", 3.00)
-
-    print("\nAdding test items to order:")
-    current_order.add_item(item_a.id, item_a.name, item_a.price, 2)
-    current_order.add_item(item_b.id, item_b.name, item_b.price, 1)
-    
-    print(f"Current Order Total: ${current_order.get_total():.2f}")
-    
-    current_order.update_status(Order.PENDING)
-    print(f"Order {current_order.order_id} sent to kitchen. Status: {current_order.status}")
-    
-    # Generate Receipt Example
-    receipt = Receipt(current_order)
-    print("\n" + "=" * 40)
-    print("Example Simple Receipt:")
-    print(receipt.generate_simple_receipt())
-    print("=" * 40)
-    
+    while True:
+        print(f"\n[Order: {current_order.order_id} | Table: {table_id} | Status: {current_order.status}]")
+        print("\nPOS MENU:")
+        print("1. Add Item")
+        print("2. Remove Item")
+        print("3. View Order")
+        print("4. Submit Order to Kitchen")
+        print("5. Cancel Order")
+        print("6. Back to Main Menu")
+        
+        choice = input("Enter your choice (1-6): ").strip()
+        
+        if choice == '1':
+            add_item_to_order(current_order)
+        
+        elif choice == '2':
+            remove_item_from_order(current_order)
+        
+        elif choice == '3':
+            view_order_summary(current_order)
+        
+        elif choice == '4':
+            if not current_order.items:
+                print("ERROR: Cannot submit empty order.")
+            elif current_order.update_status(Order.PENDING):
+                view_order_summary(current_order)
+                receipt = Receipt(current_order)
+                print("\n" + receipt.generate_simple_receipt())
+                print("\n✓ Order submitted to kitchen!")
+                break
+            else:
+                print("ERROR: Failed to submit order.")
+        
+        elif choice == '5':
+            confirm = input("Are you sure you want to cancel this order? (yes/no): ").strip().lower()
+            if confirm == 'yes':
+                current_order.update_status(Order.CANCELLED)
+                print("✓ Order cancelled.")
+                break
+        
+        elif choice == '6':
+            print("Returning to main menu...")
+            break
+        
+        else:
+            print("Invalid choice. Please try again.")
 
 def run_kitchen_cli():
-    """Simulates the Kitchen Display interface."""
     global CURRENT_USER
     if not CURRENT_USER or CURRENT_USER.get_role() != "chef":
         print("\nACCESS DENIED. You must log in as a CHEF to view the kitchen display.")
@@ -99,10 +240,8 @@ def run_kitchen_cli():
     print(f"Welcome, {CURRENT_USER.get_username()}!")
     print("Chef view: Here you would see a list of PENDING orders.")
     print("e.g. Order ORD-XXXX is PENDING.")
-    # In the full application, you would load all PENDING orders from orders.json and display them.
 
 def run_manager_cli():
-    """Simulates the Manager Dashboard interface."""
     global CURRENT_USER
     if not CURRENT_USER or CURRENT_USER.get_role() != "admin":
         print("\nACCESS DENIED. You must log in as an ADMIN (Manager) to view the dashboard.")
@@ -111,7 +250,6 @@ def run_manager_cli():
     print("\n--- Manager Dashboard ---")
     print(f"Welcome, {CURRENT_USER.get_username()}!")
     print("Manager view: Here you would see revenue stats and manage users.")
-    # In the full application, you would display revenue statistics and controls for managing users.
 
 if __name__ == "__main__":
     main_menu()

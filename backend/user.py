@@ -22,18 +22,18 @@ class User:
         return{
             "username": self.__username,
             "password": self.__password,
-            "role": self.__role # Changed self.role to self.__role
+            "role": self.__role
         }
 
-class Admin(User): # Renamed admin to Admin
+class Admin(User):
     def __init__(self, username, password):
         super().__init__(username, password, "admin")
 
-class Waiter(User): # Renamed waiter to Waiter
+class Waiter(User):
     def __init__(self, username, password):
         super().__init__(username, password, "waiter")
 
-class Chef(User): # Renamed chef to Chef
+class Chef(User):
     def __init__(self, username, password):
         super().__init__(username, password, "chef")
 
@@ -48,7 +48,6 @@ def load_users(filename="data/users.json"):
             users = []
             for user_data in data:
                 role = user_data.get("role")
-                # Updated class names in load_users function
                 if role == "admin":
                     user = Admin(user_data["username"], user_data["password"])
                 elif role == "waiter":

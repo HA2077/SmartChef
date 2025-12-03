@@ -1,12 +1,9 @@
-# Order Classes
 from datetime import datetime
 from typing import List, Dict
 import uuid
 
 
 class OrderItem:
-    """Represents a single item in an order"""
-    
     def __init__(self, product_id: str, name: str, price: float, quantity: int = 1):
         self.product_id = product_id
         self.name = name
@@ -19,8 +16,6 @@ class OrderItem:
 
 
 class Order:
-    """Order class with items list + status"""
-    
     DRAFT = "DRAFT"
     PENDING = "PENDING"
     PROCESSING = "PROCESSING"
@@ -72,7 +67,6 @@ class Order:
             self.DRAFT, self.PENDING, self.PROCESSING,
             self.COMPLETED, self.CANCELLED
         ]
-        # ADDED: Prevent status change if already in a final state
         if self.status in [self.COMPLETED, self.CANCELLED]:
             return False
         if new_status not in valid_statuses:
@@ -91,9 +85,3 @@ class Order:
     def clear_order(self) -> None:
         self.items.clear()
         self.updated_at = datetime.now()
-
-
-
-
-
-
