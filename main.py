@@ -1,5 +1,5 @@
-from backend.user import load_users, User, admin, waiter, chef
-from backend.menuitem import menu_item
+from backend.user import load_users, User, Admin, Waiter, Chef
+from backend.menuitem import MenuItem
 from backend.order import Order, OrderItem
 from backend.receipt import Receipt
 import sys
@@ -68,8 +68,8 @@ def run_pos_cli():
     current_order = Order(customer_id=table_id)
     
     # Dummy Menu Items for testing (replace with actual loading later)
-    item_a = menu_item("A1", "Burger", "Food", 15.00)
-    item_b = menu_item("B1", "Soda", "Drinks", 3.00)
+    item_a = MenuItem("A1", "Burger", "Food", 15.00)
+    item_b = MenuItem("B1", "Soda", "Drinks", 3.00)
 
     print("\nAdding test items to order:")
     current_order.add_item(item_a.id, item_a.name, item_a.price, 2)
