@@ -1,60 +1,63 @@
-from backend.user import save_users,load_users, User, Admin, Waiter, Chef
-from backend.menuitem import MenuItem
-from backend.order import Order, OrderItem, save_order, get_pending_orders , clear_all_orders
+from backend.user import save_users, load_users, User, Admin, Waiter, Chef
+from backend.menuitem import MenuItem, save_menu_items, load_menu_items
+from backend.order import Order, OrderItem, save_order, get_pending_orders, clear_all_orders
 from backend.receipt import Receipt
 import sys
 import os
 
 CURRENT_USER = None
+MENU_ITEMS = []
 
-MENU_ITEMS = [
-    MenuItem("A1", "Burger", "Food", 15.00),
-    MenuItem("A2", "Pizza", "Food", 21.05),
-    MenuItem("A3", "Pasta", "Food", 12.00),
-    MenuItem("A4", "Koshary", "Food", 13.69),
-    MenuItem("A5", "Shawrama", "Food", 14.15),
-    MenuItem("B1", "Soda", "Drinks", 3.00),
-    MenuItem("B2", "Coffee", "Drinks", 4.50),
-    MenuItem("B3", "Chocolate Milk", "Drinks", 6.67),
-    MenuItem("D1", "Cake", "Dessert", 7.00),
-    MenuItem("D2", "Brownies", "Dessert", 10.44),
-    MenuItem("D3", "Ice Cream", "Dessert", 5.50)
-]
+def initialize_menu():
+    global MENU_ITEMS
+    MENU_ITEMS = load_menu_items()
 
 def main_menu():
     if not os.path.exists("data"):
         os.makedirs("data")
+    
+    initialize_menu()
 
     while True:
         print("\n" + "=" * 30)
         print("RESTAURANT MANAGEMENT SYSTEM CLI")
         print("=" * 30)
-        print("1. Login")
-        print("2. POS System (Requires Waiter Login)")
-        print("3. Kitchen Display (Requires Chef Login)")
-        print("4. Manager Dashboard (Requires Admin Login)")
-        print("5. Exit")
         
-        choice = input("Enter your choice (1-5): ")
+        if CURRENT_USER:
+             print(f"Logged in as: {CURRENT_USER.get_username()} ({CURRENT_USER.get_role()})")
+        else:
+             print("Status: Not Logged In")
+             
+        print("-" * 30)
+        print("1. POS System (Waiter)")
+        print("2. Kitchen Display (Chef)")
+        print("3. Manager Dashboard (Admin)")
+        print("4. Exit")
+        
+        choice = input("Enter your choice (1-4): ")
         
         if choice == '1':
-            login_user()
-        elif choice == '2':
             run_pos_cli()
-        elif choice == '3':
+        elif choice == '2':
             run_kitchen_cli()
-        elif choice == '4':
+        elif choice == '3':
             run_manager_cli()
-        elif choice == '5':
+        elif choice == '4':
             print("Exiting application. Goodbye!")
-            clear_all_orders()
             sys.exit(0)
         else:
             print("Invalid choice. Please try again.")
 
-def login_user():
+def login_user_flow(required_role=None):
     global CURRENT_USER
-    
+    if CURRENT_USER:
+        if required_role and CURRENT_USER.get_role() != required_role:
+            print(f"\n[ACCESS DENIED] You are logged in as '{CURRENT_USER.get_role()}', but '{required_role}' is required.")
+            print("Please 'Logout' from your current menu first.")
+            return False
+        return True
+
+    print("\n--- LOGIN REQUIRED ---")
     users = load_users() 
     
     username = input("Enter username: ")
@@ -64,10 +67,16 @@ def login_user():
         if user.login(username, password):
             CURRENT_USER = user
             print(f"\nSUCCESS! Logged in as {CURRENT_USER.get_username()} ({CURRENT_USER.get_role().upper()}).")
-            return
+            
+            if required_role and CURRENT_USER.get_role() != required_role:
+                print(f"ERROR: Access denied. This section requires {required_role} privileges.")
+                CURRENT_USER = None # Reset if role doesn't match
+                return False
+            return True
             
     print("\nLOGIN FAILED. Invalid username or password.")
     CURRENT_USER = None
+    return False
 
 def display_menu():
     print("\n" + "=" * 60)
@@ -174,8 +183,7 @@ def view_order_summary(order):
 
 def run_pos_cli():
     global CURRENT_USER
-    if not CURRENT_USER or CURRENT_USER.get_role() != "waiter":
-        print("\nACCESS DENIED. You must log in as a WAITER to use the POS system.")
+    if not login_user_flow(required_role="waiter"):
         return
 
     print("\n--- POS System ---")
@@ -196,49 +204,48 @@ def run_pos_cli():
         print("3. View Order")
         print("4. Submit Order to Kitchen")
         print("5. Cancel Order")
-        print("6. Back to Main Menu")
+        print("6. Back to Main Menu (Keep Logged In)")
+        print("7. Logout")
         
-        choice = input("Enter your choice (1-6): ").strip()
+        choice = input("Enter your choice (1-7): ").strip()
         
         if choice == '1':
             add_item_to_order(current_order)
-        
         elif choice == '2':
             remove_item_from_order(current_order)
-        
         elif choice == '3':
             view_order_summary(current_order)
-        
         elif choice == '4':
             if not current_order.items:
                 print("ERROR: Cannot submit empty order.")
             else:
                 current_order.update_status(Order.PENDING)
                 save_order(current_order)
-                
                 print("\n" + "="*40)
                 print(f"✓ Order {current_order.order_id} sent to KITCHEN successfully!")
                 print("="*40)
-                break
-        
+                # Optionally clear current order or break to start new one
+                # For now, let's keep them in the menu to start a new one or logout
+                current_order = Order(customer_id=table_id) # Reset for next order
         elif choice == '5':
             confirm = input("Are you sure you want to cancel this order? (yes/no): ").strip().lower()
             if confirm == 'yes':
                 current_order.update_status(Order.CANCELLED)
                 print("✓ Order cancelled.")
                 break
-        
         elif choice == '6':
             print("Returning to main menu...")
             break
-        
+        elif choice == '7':
+            print(f"Logging out {CURRENT_USER.get_username()}...")
+            CURRENT_USER = None
+            break
         else:
             print("Invalid choice. Please try again.")
 
 def run_kitchen_cli():
     global CURRENT_USER
-    if not CURRENT_USER or CURRENT_USER.get_role() != "chef":
-        print("\nACCESS DENIED. You must log in as a CHEF to view the kitchen display.")
+    if not login_user_flow(required_role="chef"):
         return
     
     print(f"\n--- Kitchen Display System (Chef: {CURRENT_USER.get_username()}) ---")
@@ -262,11 +269,16 @@ def run_kitchen_cli():
         print("\nOPTIONS:")
         print(" [R] Refresh List")
         print(" [Number] Complete Order (e.g., 1)")
-        print(" [B] Back to Main Menu")
+        print(" [B] Back to Main Menu (Keep Logged In)")
+        print(" [L] Logout")
         
         choice = input("Action: ").strip().upper()
         
         if choice == 'B':
+            break
+        elif choice == 'L':
+            print(f"Logging out {CURRENT_USER.get_username()}...")
+            CURRENT_USER = None
             break
         elif choice == 'R':
             continue
@@ -335,15 +347,60 @@ def add_user():
         new_user = Waiter(username, password)
     elif role == "chef":
         new_user = Chef(username, password)
+    else:
+        new_user = User(username, password, role)
     
     users.append(new_user)
     save_users(users)
     print(f"✓ Successfully added new user: {username} ({role.upper()})")
 
+def add_menu_item_manager():
+    print("\n--- ADD NEW MENU ITEM ---")
+    
+    item_id = input("Enter Item ID (e.g., F1): ").strip().upper()
+    if find_menu_item(item_id):
+        print("ERROR: Item ID already exists.")
+        return
+    
+    name = input("Enter Item Name: ").strip()
+    category = input("Enter Category (e.g., Food, Drinks): ").strip()
+    
+    try:
+        price = float(input("Enter Price: "))
+    except ValueError:
+        print("ERROR: Invalid price.")
+        return
+        
+    new_item = MenuItem(item_id, name, category, price)
+    MENU_ITEMS.append(new_item)
+    if save_menu_items(MENU_ITEMS):
+        print(f"✓ Added {name} to menu.")
+    else:
+        print("ERROR: Could not save menu.")
+
+def remove_menu_item_manager():
+    print("\n--- REMOVE MENU ITEM ---")
+    display_menu()
+    
+    item_id = input("\nEnter ID of item to remove: ").strip().upper()
+    
+    for i, item in enumerate(MENU_ITEMS):
+        if item.id == item_id:
+            confirm = input(f"Are you sure you want to delete {item.name}? (yes/no): ").lower()
+            if confirm == 'yes':
+                MENU_ITEMS.pop(i)
+                save_menu_items(MENU_ITEMS)
+                print(f"✓ Removed item {item_id}.")
+                return
+            else:
+                print("Deletion cancelled.")
+                return
+    
+    print("ERROR: Item ID not found.")
+
 def run_manager_cli():
     global CURRENT_USER
-    if not CURRENT_USER or CURRENT_USER.get_role() != "admin":
-        print("\nACCESS DENIED. You must log in as an ADMIN (Manager) to view the dashboard.")
+    if not login_user_flow(required_role="admin"):
         return
         
     while True:
@@ -352,17 +409,28 @@ def run_manager_cli():
         print("-" * 30)
         print("1. View All Users")
         print("2. Add New User")
-        print("3. Back to Main Menu")
+        print("3. Add Menu Item")
+        print("4. Remove Menu Item")
+        print("5. Back to Main Menu (Keep Logged In)")
+        print("6. Logout")
         print("-" * 30)
         
-        choice = input("Enter your choice (1-3): ").strip()
+        choice = input("Enter your choice (1-6): ").strip()
         
         if choice == '1':
             view_users()
         elif choice == '2':
             add_user()
         elif choice == '3':
+            add_menu_item_manager()
+        elif choice == '4':
+            remove_menu_item_manager()
+        elif choice == '5':
             print("Returning to main menu...")
+            break
+        elif choice == '6':
+            print(f"Logging out {CURRENT_USER.get_username()}...")
+            CURRENT_USER = None
             break
         else:
             print("Invalid choice. Please try again.")

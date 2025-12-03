@@ -1,0 +1,74 @@
+[
+    {
+        "id": "A1",
+        "name": "Burger",
+        "category": "Food",
+        "price": 15.0
+    },
+    {
+        "id": "A2",
+        "name": "Pizza",
+        "category": "Food",
+        "price": 21.05
+    },
+    {
+        "id": "A3",
+        "name": "Pasta",
+        "category": "Food",
+        "price": 12.0
+    },
+    {
+        "id": "A4",
+        "name": "Koshary",
+        "category": "Food",
+        "price": 13.69
+    },
+    {
+        "id": "A5",
+        "name": "Shawrama",
+        "category": "Food",
+        "price": 14.15
+    },
+    {
+        "id": "B1",
+        "name": "Soda",
+        "category": "Drinks",
+        "price": 3.0
+    },
+    {
+        "id": "B2",
+        "name": "Coffee",
+        "category": "Drinks",
+        "price": 4.5
+    },
+    {
+        "id": "B3",
+        "name": "Chocolate Milk",
+        "category": "Drinks",
+        "price": 6.67
+    },
+    {
+        "id": "D1",
+        "name": "Cake",
+        "category": "Dessert",
+        "price": 7.0
+    },
+    {
+        "id": "D2",
+        "name": "Brownies",
+        "category": "Dessert",
+        "price": 10.44
+    },
+    {
+        "id": "D3",
+        "name": "Ice Cream",
+        "category": "Dessert",
+        "price": 5.5
+    },
+    {
+        "id": "E1",
+        "name": "Bottle of Water",
+        "category": "Extra",
+        "price": 2.5
+    }
+]
