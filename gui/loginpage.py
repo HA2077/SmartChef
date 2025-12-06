@@ -4,16 +4,15 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from backend.user import load_users, Admin, Waiter, Chef
-from .pospage import POSDashboard
-from .kitchenpage import KitchenDashboard
-from .adminpage import AdminDashboard
+
 COLOR_ACCENT = "#800000"
 COLOR_BG = "#FFFFFF"
 
 class LoginWindow(tk.Toplevel):
-    def __init__(self, parent, role):
+    def __init__(self, parent, role, dashboard_instance=None):
         super().__init__(parent)
         self.role = role
+        self.dashboard_instance = dashboard_instance # Store the preloaded window
         self.users = load_users()
 
         self.title(f"{role} Login")
@@ -59,23 +58,24 @@ class LoginWindow(tk.Toplevel):
         password = self.entry_pass.get()
         
         for user in self.users:
+            # Check username and password
             if user.get_username() == username and user.login(username, password):
                 role_map = {"Manager": Admin, "Waiter": Waiter, "Chef": Chef}
                 target_class = role_map.get(self.role)
                 
+                # Check if user has the correct role (or is an Admin)
                 if isinstance(user, target_class) or isinstance(user, Admin):
-                    # --- START NEW DASHBOARD OPENING LOGIC ---
                     messagebox.showinfo("Success", f"Welcome back, {username}!")
-                    
-                    if self.role == "Waiter":
-                        POSDashboard(self.master)
-                    elif self.role == "Chef":
-                        KitchenDashboard(self.master)
-                    elif self.role == "Manager":
-                        AdminDashboard(self.master)
-                    
-                    self.destroy() # Close the login window
-                    # --- END NEW DASHBOARD OPENING LOGIC ---
+                    self.destroy()
+                    # --- REVEAL PRELOADED DASHBOARD ---
+                    if self.dashboard_instance:
+                        self.dashboard_instance.deiconify() # Show the dashboard
+                        try:
+                            self.dashboard_instance.state('zoomed')
+                        except:
+                            self.dashboard_instance.geometry("1200x800")
+                    else:
+                        messagebox.showerror("Error", "System Error: Dashboard not loaded.")
                     return
                 else:
                     messagebox.showerror("Access Denied", f"This account is not a {self.role}.")
@@ -83,8 +83,8 @@ class LoginWindow(tk.Toplevel):
         
         messagebox.showerror("Failed", "Invalid Username or Password")
 
-def open_login_window(parent, role):
-    window = LoginWindow(parent, role)
+def open_login_window(parent, role, dashboard_instance=None):
+    window = LoginWindow(parent, role, dashboard_instance)
     window.transient(parent)
     window.grab_set()
     parent.wait_window(window)

@@ -1,9 +1,12 @@
 import tkinter as tk
-from tkinter import messagebox  # pip install tkinter / pip install pillow
-from PIL import Image, ImageTk  # نزل تينكرر و بلوو عشان الكود يشتغل 
+from tkinter import messagebox 
+from PIL import Image, ImageTk 
 import os
 import sys
 from gui.loginpage import open_login_window
+from gui.pospage import POSDashboard
+from gui.kitchenpage import KitchenDashboard
+from gui.adminpage import AdminDashboard
 
 THEME_COLOR = "#800000" 
 TEXT_COLOR = "#FFFFFF" 
@@ -25,6 +28,9 @@ class SmartChefApp(tk.Tk):
         except:
             self.geometry("1280x800")
         
+        self.dashboards = {}
+        self.preload_dashboards()
+
         self.canvas = tk.Canvas(self, bg=THEME_COLOR, highlightthickness=0)
         self.canvas.pack(fill="both", expand=True)
         
@@ -46,6 +52,32 @@ class SmartChefApp(tk.Tk):
         self.card_chef = self.create_card_frame("Chef", "assets/Chef.png")
         self.bind("<Configure>", self.resize_layout)
 
+    def preload_dashboards(self):
+        print("Preloading dashboards...")
+        
+        # 1. Waiter / POS
+        pos = POSDashboard(self)
+        pos.withdraw()
+        pos.protocol("WM_DELETE_WINDOW", lambda: self.hide_dashboard(pos))
+        self.dashboards["Waiter"] = pos
+        
+        # 2. Chef / Kitchen
+        kitchen = KitchenDashboard(self)
+        kitchen.withdraw()
+        kitchen.protocol("WM_DELETE_WINDOW", lambda: self.hide_dashboard(kitchen))
+        self.dashboards["Chef"] = kitchen
+        
+        # 3. Manager / Admin
+        admin = AdminDashboard(self)
+        admin.withdraw()
+        admin.protocol("WM_DELETE_WINDOW", lambda: self.hide_dashboard(admin))
+        self.dashboards["Manager"] = admin
+
+    def hide_dashboard(self, window):
+        window.withdraw()
+        self.deiconify()
+        self.state('zoomed')
+
     def load_background(self):
         bg_path = "assets/BG.jpg"
         if os.path.exists(bg_path):
@@ -55,7 +87,6 @@ class SmartChefApp(tk.Tk):
                 print(f"Error loading background: {e}")
 
     def resize_layout(self, event):
-        """Handles resizing of background, text, and cards dynamically"""
         w = self.winfo_width()
         h = self.winfo_height()
         
@@ -110,7 +141,8 @@ class SmartChefApp(tk.Tk):
         return card
 
     def open_login(self, role):
-        open_login_window(self, role)
+        target_dashboard = self.dashboards.get(role)
+        open_login_window(self, role, target_dashboard)
 
 if __name__ == "__main__":
     app = SmartChefApp()
