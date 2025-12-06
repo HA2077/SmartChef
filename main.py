@@ -3,11 +3,7 @@ from tkinter import messagebox  # pip install tkinter / pip install pillow
 from PIL import Image, ImageTk  # نزل تينكرر و بلوو عشان الكود يشتغل 
 import os
 import sys
-
-try:
-    from gui import loginpage
-except ImportError:
-    loginpage = None
+from gui.loginpage import open_login_window
 
 THEME_COLOR = "#800000" 
 TEXT_COLOR = "#FFFFFF" 
@@ -114,10 +110,7 @@ class SmartChefApp(tk.Tk):
         return card
 
     def open_login(self, role):
-        if loginpage:
-            loginpage.open_login_window(self, role)
-        else:
-            messagebox.showerror("Error", "loginpage.py not found!")
+        open_login_window(self, role)
 
 if __name__ == "__main__":
     app = SmartChefApp()

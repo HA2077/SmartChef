@@ -1,7 +1,12 @@
 import tkinter as tk
 from tkinter import messagebox
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from backend.user import load_users, Admin, Waiter, Chef
-
+from .pospage import POSDashboard
+from .kitchenpage import KitchenDashboard
+from .adminpage import AdminDashboard
 COLOR_ACCENT = "#800000"
 COLOR_BG = "#FFFFFF"
 
@@ -59,9 +64,18 @@ class LoginWindow(tk.Toplevel):
                 target_class = role_map.get(self.role)
                 
                 if isinstance(user, target_class) or isinstance(user, Admin):
+                    # --- START NEW DASHBOARD OPENING LOGIC ---
                     messagebox.showinfo("Success", f"Welcome back, {username}!")
-                    self.destroy()
-                    # TODO: Open specific dashboard here
+                    
+                    if self.role == "Waiter":
+                        POSDashboard(self.master)
+                    elif self.role == "Chef":
+                        KitchenDashboard(self.master)
+                    elif self.role == "Manager":
+                        AdminDashboard(self.master)
+                    
+                    self.destroy() # Close the login window
+                    # --- END NEW DASHBOARD OPENING LOGIC ---
                     return
                 else:
                     messagebox.showerror("Access Denied", f"This account is not a {self.role}.")
