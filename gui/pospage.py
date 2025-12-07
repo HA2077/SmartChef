@@ -5,7 +5,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from backend.menuitem import load_menu_items
-from backend.order import Order
+from backend.order import Order, save_order, Order as OrderClass 
 
 BG_COLOR = "#2B0505"        
 SECTION_BG = "#550a0a"     
@@ -157,17 +157,47 @@ class POSDashboard(tk.Toplevel):
         if messagebox.askyesno("Cancel Order", "Are you sure you want to clear the current order?"):
             self.current_order.clear_order()
             self.refresh_order_display()
+            self.update_totals()
+
+    def submit_order_to_kitchen(self):
+        if not self.current_order.items:
+            messagebox.showwarning("Empty Order", "Please add items to the order before sending.")
+            return
+
+        table_num = self.entry_table.get().strip()
+        if not table_num:
+            messagebox.showwarning("Missing Info", "Please enter a Table Number.")
+            self.entry_table.focus()
+            return
+
+        self.current_order.customer_id = f"Table {table_num}"
+        self.current_order.update_status(OrderClass.PENDING)
+
+        save_order(self.current_order)
+        messagebox.showinfo("Order Sent", f"Order sent to Kitchen for Table {table_num}!")
+        
+        self.current_order = Order("Walk-in") 
+        self.entry_table.delete(0, tk.END)
+        self.refresh_order_display()
 
     def build_order_section(self):
+        # -- Table Number Input --
+        table_frame = tk.Frame(self.frame_order, bg=SECTION_BG)
+        table_frame.pack(fill="x", pady=(0, 10))
+        
+        tk.Label(table_frame, text="Table #:", font=("Segoe UI", 12, "bold"), bg=SECTION_BG, fg="white").pack(side="left")
+        self.entry_table = tk.Entry(table_frame, font=("Segoe UI", 12), width=10)
+        self.entry_table.pack(side="left", padx=10)
+
         tk.Label(self.frame_order, text="CURRENT ORDER", font=("Segoe UI", 14, "bold"), bg=SECTION_BG, fg="white").pack(pady=(0, 10))
 
-        # Header
+        # Header with Fixed Alignment
         hdr = tk.Frame(self.frame_order, bg=SECTION_BG)
         hdr.pack(fill="x")
-        tk.Label(hdr, text="Qty   Item Name", bg=SECTION_BG, fg="white", font=("Segoe UI", 10, "bold")).pack(side="left")
-        tk.Label(hdr, text="Price", bg=SECTION_BG, fg="white", font=("Segoe UI", 10, "bold")).pack(side="right")
+        
+        tk.Label(hdr, text="Qty   Item Name", bg=SECTION_BG, fg="white", font=("Segoe UI", 10, "bold")).pack(side="left", padx=0)
+        tk.Label(hdr, text="Price", bg=SECTION_BG, fg="white", font=("Segoe UI", 10, "bold")).pack(side="right", padx=(0, 145))
 
-        # Scrollable Order List
         self.order_canvas = tk.Canvas(self.frame_order, bg=SECTION_BG, highlightthickness=0)
         self.order_scroll = tk.Scrollbar(self.frame_order, orient="vertical", command=self.order_canvas.yview)
         self.order_list_frame = tk.Frame(self.order_canvas, bg=SECTION_BG)
@@ -190,8 +220,8 @@ class POSDashboard(tk.Toplevel):
             txt_left = f"{item.quantity}x   {item.name}"
             txt_right = f"${item.subtotal:.2f}"
             
-            tk.Label(row, text=txt_left, bg=SECTION_BG, fg="white", font=("Segoe UI", 11)).pack(side="left")
-            tk.Label(row, text=txt_right, bg=SECTION_BG, fg="white", font=("Segoe UI", 11)).pack(side="right")
+            tk.Label(row, text=txt_left, bg=SECTION_BG, fg="white", font=("Segoe UI", 11)).pack(side="left", padx=5)
+            tk.Label(row, text=txt_right, bg=SECTION_BG, fg="white", font=("Segoe UI", 11)).pack(side="right", padx=20)
 
         self.update_totals()
 
@@ -219,7 +249,7 @@ class POSDashboard(tk.Toplevel):
         # Send to Kitchen (Bottom)
         btn_send = tk.Button(self.frame_checkout, text="SEND TO\nKITCHEN", bg="#CC3333", fg="white",
                          font=("Segoe UI", 16, "bold"), relief="flat", height=3, cursor="hand2",
-                         command=lambda: messagebox.showinfo("Order Sent", f"Order #{self.current_order.order_id} sent!"))
+                         command=self.submit_order_to_kitchen)
         btn_send.pack(side="bottom", fill="x", pady=(10, 0))
 
         # Cancel Order (Above Send)
