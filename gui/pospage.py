@@ -196,7 +196,7 @@ class POSDashboard(tk.Toplevel):
         hdr.pack(fill="x")
         
         tk.Label(hdr, text="Qty   Item Name", bg=SECTION_BG, fg="white", font=("Segoe UI", 10, "bold")).pack(side="left", padx=0)
-        tk.Label(hdr, text="Price", bg=SECTION_BG, fg="white", font=("Segoe UI", 10, "bold")).pack(side="right", padx=(0, 145))
+        tk.Label(hdr, text="Price", bg=SECTION_BG, fg="white", font=("Segoe UI", 10, "bold")).pack(side="right", padx=(0, 147))
 
         self.order_canvas = tk.Canvas(self.frame_order, bg=SECTION_BG, highlightthickness=0)
         self.order_scroll = tk.Scrollbar(self.frame_order, orient="vertical", command=self.order_canvas.yview)
