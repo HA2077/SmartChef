@@ -1,439 +1,187 @@
-from backend.user import save_users, load_users, User, Admin, Waiter, Chef
-from backend.menuitem import MenuItem, save_menu_items, load_menu_items
-from backend.order import Order, OrderItem, save_order, get_pending_orders, clear_all_orders
-from backend.receipt import Receipt
-import sys
+import tkinter as tk
+from tkinter import messagebox 
+from PIL import Image, ImageTk 
 import os
+import sys
+from gui.loginpage import open_login_window
+from gui.pospage import POSDashboard
+from gui.kitchenpage import KitchenDashboard
+from gui.adminpage import AdminDashboard
+from backend.order import clear_all_orders
 
-CURRENT_USER = None
-MENU_ITEMS = []
+THEME_COLOR = "#800000" 
+TEXT_COLOR = "#FFFFFF" 
+FONT_HEADER = ("Segoe UI", 42, "bold")
+FONT_SUB = ("Segoe UI", 16)
+FONT_CARD_TITLE = ("Segoe UI", 20, "bold")
+FONT_BTN = ("Segoe UI", 11, "bold")
 
-def initialize_menu():
-    global MENU_ITEMS
-    MENU_ITEMS = load_menu_items()
-
-def main_menu():
-    if not os.path.exists("data"):
-        os.makedirs("data")
-    
-    initialize_menu()
-
-    while True:
-        print("\n" + "=" * 30)
-        print("RESTAURANT MANAGEMENT SYSTEM CLI")
-        print("=" * 30)
+class SmartChefApp(tk.Tk):
+    def __init__(self):
+        super().__init__()
         
-        if CURRENT_USER:
-             print(f"Logged in as: {CURRENT_USER.get_username()} ({CURRENT_USER.get_role()})")
-        else:
-             print("Status: Not Logged In")
-             
-        print("-" * 30)
-        print("1. POS System (Waiter)")
-        print("2. Kitchen Display (Chef)")
-        print("3. Manager Dashboard (Admin)")
-        print("4. Exit")
-        
-        choice = input("Enter your choice (1-4): ")
-        
-        if choice == '1':
-            run_pos_cli()
-        elif choice == '2':
-            run_kitchen_cli()
-        elif choice == '3':
-            run_manager_cli()
-        elif choice == '4':
-            print("Exiting application. Goodbye!")
-            sys.exit(0)
-        else:
-            print("Invalid choice. Please try again.")
+        self.title("SmartChef System")
+        self.resizable(True, True)
+        self.minsize(1000, 700)
 
-def login_user_flow(required_role=None):
-    global CURRENT_USER
-    if CURRENT_USER:
-        if required_role and CURRENT_USER.get_role() != required_role:
-            print(f"\n[ACCESS DENIED] You are logged in as '{CURRENT_USER.get_role()}', but '{required_role}' is required.")
-            print("Please 'Logout' from your current menu first.")
-            return False
-        return True
-
-    print("\n--- LOGIN REQUIRED ---")
-    users = load_users() 
-    
-    username = input("Enter username: ")
-    password = input("Enter password: ")
-    
-    for user in users:
-        if user.login(username, password):
-            CURRENT_USER = user
-            print(f"\nSUCCESS! Logged in as {CURRENT_USER.get_username()} ({CURRENT_USER.get_role().upper()}).")
+        icon_path = "assets/SC.png" 
+        if os.path.exists(icon_path):
+            try:
+                icon_img = tk.PhotoImage(file=icon_path)
+                self.iconphoto(True, icon_img)
+            except Exception as e:
+                print(f"Error loading app icon: {e}")
+        
+        self.maximize_me()
             
-            if required_role and CURRENT_USER.get_role() != required_role:
-                print(f"ERROR: Access denied. This section requires {required_role} privileges.")
-                CURRENT_USER = None # Reset if role doesn't match
-                return False
-            return True
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+        
+        self.dashboards = {}
+        self.preload_dashboards()
+
+        self.canvas = tk.Canvas(self, bg=THEME_COLOR, highlightthickness=0)
+        self.canvas.pack(fill="both", expand=True)
+        
+        self.bg_image_id = None
+        self.title_id = None
+        self.subtitle_id = None
+        self.bg_image_original = None
+        self.bg_photo = None
+        self.load_background()
+        
+        self.title_id = self.canvas.create_text(0, 0, text="Welcome to SmartChef", 
+                                                font=FONT_HEADER, fill=TEXT_COLOR, anchor="center")
+        
+        self.subtitle_id = self.canvas.create_text(0, 0, text="Select your role to continue", 
+                                                   font=FONT_SUB, fill="#DDDDDD", anchor="center")
+
+        self.card_manager = self.create_card_frame("Manager", "assets/Manager.png")
+        self.card_waiter = self.create_card_frame("Waiter", "assets/Waiter.png")
+        self.card_chef = self.create_card_frame("Chef", "assets/Chef.png")
+        self.bind("<Configure>", self.resize_layout)
+
+    def maximize_me(self):
+        try:
+            self.state('zoomed') 
+            return
+        except tk.TclError:
+            pass
             
-    print("\nLOGIN FAILED. Invalid username or password.")
-    CURRENT_USER = None
-    return False
-
-def display_menu():
-    print("\n" + "=" * 60)
-    print("AVAILABLE MENU ITEMS")
-    print("=" * 60)
-    
-    categories = {}
-    for item in MENU_ITEMS:
-        if item.category not in categories:
-            categories[item.category] = []
-        categories[item.category].append(item)
-    
-    for category in sorted(categories.keys()):
-        print(f"\n{category.upper()}:")
-        print("-" * 60)
-        for item in categories[category]:
-            print(f"  {item.id:5} | {item.name:20} | ${item.price:6.2f}")
-    
-    print("=" * 60)
-
-def find_menu_item(item_id):
-    for item in MENU_ITEMS:
-        if item.id == item_id:
-            return item
-    return None
-
-def add_item_to_order(order):
-    display_menu()
-    
-    item_id = input("\nEnter Item ID to add (or 'back' to return): ").strip().upper()
-    
-    if item_id == 'BACK':
-        return
-    
-    menu_item = find_menu_item(item_id)
-    if not menu_item:
-        print(f"ERROR: Item ID '{item_id}' not found.")
-        return
-    
-    try:
-        quantity = int(input(f"Enter quantity for {menu_item.name}: "))
-        if quantity <= 0:
-            print("ERROR: Quantity must be greater than 0.")
+        try:
+            self.attributes('-zoomed', True)
             return
-        
-        if order.add_item(menu_item.id, menu_item.name, menu_item.price, quantity):
-            print(f"✓ Added {quantity}x {menu_item.name} @ ${menu_item.price:.2f} each")
-        else:
-            print("ERROR: Failed to add item to order.")
-    except ValueError:
-        print("ERROR: Invalid quantity. Please enter a number.")
+        except tk.TclError:
+            pass
 
-def remove_item_from_order(order):
-    if not order.items:
-        print("ERROR: Order is empty. Nothing to remove.")
-        return
-    
-    print("\nCURRENT ORDER ITEMS:")
-    print("-" * 60)
-    for i, item in enumerate(order.items, 1):
-        print(f"  {i}. {item.name:20} | Qty: {item.quantity:2} | ${item.price:6.2f} each | Subtotal: ${item.subtotal:.2f}")
-    
-    try:
-        item_index = int(input("\nEnter item number to remove (or 0 to cancel): "))
+        try:
+            w = self.winfo_screenwidth()
+            h = self.winfo_screenheight()
+            self.geometry(f"{w}x{h}+0+0")
+        except:
+            self.geometry("1280x800")
+
+    def on_closing(self):
+        try:
+            print("Cleaning up orders...")
+            clear_all_orders()
+        except Exception as e:
+            print(f"Error during cleanup: {e}")
+        finally:
+            self.destroy()
+
+    def preload_dashboards(self):
+        print("Preloading dashboards...")
         
-        if item_index == 0:
-            return
+        # 1. Waiter / POS
+        pos = POSDashboard(self)
+        pos.withdraw()
+        pos.protocol("WM_DELETE_WINDOW", lambda: self.hide_dashboard(pos))
+        self.dashboards["Waiter"] = pos
         
-        if 1 <= item_index <= len(order.items):
-            item_to_remove = order.items[item_index - 1]
-            remove_qty = input(f"Remove all {item_to_remove.quantity}x {item_to_remove.name}? (yes/no): ").strip().lower()
+        # 2. Chef / Kitchen
+        kitchen = KitchenDashboard(self)
+        kitchen.withdraw()
+        kitchen.protocol("WM_DELETE_WINDOW", lambda: self.hide_dashboard(kitchen))
+        self.dashboards["Chef"] = kitchen
+        
+        # 3. Manager / Admin
+        admin = AdminDashboard(self)
+        admin.withdraw()
+        admin.protocol("WM_DELETE_WINDOW", lambda: self.hide_dashboard(admin))
+        self.dashboards["Manager"] = admin
+
+    def hide_dashboard(self, window):
+        window.withdraw()
+        self.deiconify()
+        # Maximize main window again when returning
+        self.maximize_me()
+
+    def load_background(self):
+        bg_path = "assets/BG.jpg"
+        if os.path.exists(bg_path):
+            try:
+                self.bg_image_original = Image.open(bg_path)
+            except Exception as e:
+                print(f"Error loading background: {e}")
+
+    def resize_layout(self, event):
+        w = self.winfo_width()
+        h = self.winfo_height()
+        
+        if w < 100 or h < 100: return
+        if self.bg_image_original:
+            resized = self.bg_image_original.resize((w, h), Image.Resampling.LANCZOS)
+            self.bg_photo = ImageTk.PhotoImage(resized)
             
-            if remove_qty == 'yes':
-                if order.remove_item(item_to_remove.product_id):
-                    print(f"✓ Removed {item_to_remove.name} from order.")
+            if self.bg_image_id:
+                self.canvas.itemconfig(self.bg_image_id, image=self.bg_photo)
             else:
-                qty_input = input("Enter quantity to remove: ")
-                qty = int(qty_input)
-                if qty > 0:
-                    if order.remove_item(item_to_remove.product_id, qty):
-                        print(f"✓ Removed {qty}x {item_to_remove.name} from order.")
-        else:
-            print("ERROR: Invalid item number.")
-    except ValueError:
-        print("ERROR: Invalid input. Please enter a number.")
+                self.bg_image_id = self.canvas.create_image(0, 0, image=self.bg_photo, anchor="nw")
+                self.canvas.tag_lower(self.bg_image_id)
 
-def view_order_summary(order):
-    if not order.items:
-        print("\nOrder is empty.")
-        return
-    
-    print("\n" + "=" * 60)
-    print(f"ORDER SUMMARY - {order.order_id}")
-    print("=" * 60)
-    print(f"Status: {order.status}")
-    print("-" * 60)
-    
-    for item in order.items:
-        print(f"{item.name:20} | Qty: {item.quantity:2} | ${item.price:6.2f} x {item.quantity} | ${item.subtotal:8.2f}")
-    
-    print("-" * 60)
-    print(f"{'TOTAL':20} | {' ' * 22} | ${order.get_total():8.2f}")
-    print("=" * 60)
+        self.canvas.coords(self.title_id, w/2, h * 0.15)
+        self.canvas.coords(self.subtitle_id, w/2, h * 0.22)
+        card_y = h * 0.60 
+        self.card_manager.place(x=w*0.25, y=card_y, anchor="center", width=280, height=380)
+        self.card_waiter.place(x=w*0.50, y=card_y, anchor="center", width=280, height=380)
+        self.card_chef.place(x=w*0.75, y=card_y, anchor="center", width=280, height=380)
 
-def run_pos_cli():
-    global CURRENT_USER
-    if not login_user_flow(required_role="waiter"):
-        return
-
-    print("\n--- POS System ---")
-    print(f"Welcome, {CURRENT_USER.get_username()}!")
-    
-    table_id = input("Enter Table ID/Customer ID for new order: ").strip()
-    if not table_id:
-        print("ERROR: Table ID cannot be empty.")
-        return
-    
-    current_order = Order(customer_id=table_id)
-    
-    while True:
-        print(f"\n[Order: {current_order.order_id} | Table: {table_id} | Status: {current_order.status}]")
-        print("\nPOS MENU:")
-        print("1. Add Item")
-        print("2. Remove Item")
-        print("3. View Order")
-        print("4. Submit Order to Kitchen")
-        print("5. Cancel Order")
-        print("6. Back to Main Menu (Keep Logged In)")
-        print("7. Logout")
+    def create_card_frame(self, role, icon_path):
+        card = tk.Frame(self, bg="white", padx=20, pady=30, relief="raised", bd=2)
         
-        choice = input("Enter your choice (1-7): ").strip()
-        
-        if choice == '1':
-            add_item_to_order(current_order)
-        elif choice == '2':
-            remove_item_from_order(current_order)
-        elif choice == '3':
-            view_order_summary(current_order)
-        elif choice == '4':
-            if not current_order.items:
-                print("ERROR: Cannot submit empty order.")
-            else:
-                current_order.update_status(Order.PENDING)
-                save_order(current_order)
-                print("\n" + "="*40)
-                print(f"✓ Order {current_order.order_id} sent to KITCHEN successfully!")
-                print("="*40)
-                # Optionally clear current order or break to start new one
-                # For now, let's keep them in the menu to start a new one or logout
-                current_order = Order(customer_id=table_id) # Reset for next order
-        elif choice == '5':
-            confirm = input("Are you sure you want to cancel this order? (yes/no): ").strip().lower()
-            if confirm == 'yes':
-                current_order.update_status(Order.CANCELLED)
-                print("✓ Order cancelled.")
-                break
-        elif choice == '6':
-            print("Returning to main menu...")
-            break
-        elif choice == '7':
-            print(f"Logging out {CURRENT_USER.get_username()}...")
-            CURRENT_USER = None
-            break
-        else:
-            print("Invalid choice. Please try again.")
-
-def run_kitchen_cli():
-    global CURRENT_USER
-    if not login_user_flow(required_role="chef"):
-        return
-    
-    print(f"\n--- Kitchen Display System (Chef: {CURRENT_USER.get_username()}) ---")
-    
-    while True:
-        pending_orders = get_pending_orders()
-        
-        print("\n" + "="*60)
-        print(f"PENDING ORDERS QUEUE ({len(pending_orders)})")
-        print("="*60)
-        
-        if not pending_orders:
-            print("No pending orders. Waiting for waiters...")
-        else:
-            for i, order in enumerate(pending_orders, 1):
-                items_str = ", ".join([f"{item.quantity}x {item.name}" for item in order.items])
-                print(f"{i}. [#{order.order_id}] Table: {order.customer_id}")
-                print(f"   Time: {order.created_at.strftime('%H:%M')} | Items: {items_str}")
-                print("-" * 60)
-
-        print("\nOPTIONS:")
-        print(" [R] Refresh List")
-        print(" [Number] Complete Order (e.g., 1)")
-        print(" [B] Back to Main Menu (Keep Logged In)")
-        print(" [L] Logout")
-        
-        choice = input("Action: ").strip().upper()
-        
-        if choice == 'B':
-            break
-        elif choice == 'L':
-            print(f"Logging out {CURRENT_USER.get_username()}...")
-            CURRENT_USER = None
-            break
-        elif choice == 'R':
-            continue
-        elif choice.isdigit():
-            idx = int(choice) - 1
-            if 0 <= idx < len(pending_orders):
-                order_to_complete = pending_orders[idx]
+        if os.path.exists(icon_path):
+            try:
+                img = Image.open(icon_path)
+                img = img.resize((120, 120), Image.Resampling.LANCZOS)
+                photo = ImageTk.PhotoImage(img)
                 
-                order_to_complete.update_status(Order.COMPLETED)
-                save_order(order_to_complete)
-                
-                receipt = Receipt(order_to_complete)
-                file_path = receipt.save_to_file()
-                
-                print(f"\n>>> Order {order_to_complete.order_id} marked COMPLETED! <<<")
-                print(f">>> Receipt generated automatically at: {file_path}")
-                print("-" * 40)
-                print(receipt.generate_simple_receipt())
-                print("-" * 40)
-                input("\nPress Enter to continue...")
-            else:
-                print("ERROR: Invalid order number.")
+                icon_lbl = tk.Label(card, image=photo, bg="white")
+                icon_lbl.image = photo 
+                icon_lbl.pack(pady=(10, 20))
+            except:
+                tk.Label(card, text=role[0], font=("Segoe UI", 60), bg="white").pack(pady=20)
         else:
-            print("Invalid option.")
+            tk.Label(card, text=role[0], font=("Segoe UI", 60, "bold"), 
+                     bg="white", fg=THEME_COLOR).pack(pady=(10, 20))
+            
+        tk.Label(card, text=role, font=FONT_CARD_TITLE, bg="white", fg="#333").pack(pady=(0, 5))
+        tk.Frame(card, bg=THEME_COLOR, height=3, width=60).pack(pady=(0, 25))
+        btn = tk.Button(card, text="LOGIN", font=FONT_BTN,
+                        bg=THEME_COLOR, fg="white", 
+                        activebackground="#A52A2A", activeforeground="white",
+                        relief="flat", cursor="hand2", width=18, pady=8,
+                        command=lambda: self.open_login(role))
+        btn.pack(side="bottom", pady=10)
 
-def view_users():
-    users = load_users()
-    print("\n" + "=" * 40)
-    print("SYSTEM USERS")
-    print("=" * 40)
-    if not users:
-        print("No users found.")
-        return
-    
-    for user in users:
-        print(f"  - {user.get_username():<15} | Role: {user.get_role().upper()}")
-    print("=" * 40)
-
-def add_user():
-    users = load_users()
-    print("\n--- ADD NEW USER ---")
-    
-    username = input("Enter new username: ").strip()
-    if not username:
-        print("ERROR: Username cannot be empty.")
-        return
+        btn.bind("<Enter>", lambda e: btn.config(bg="#A52A2A"))
+        btn.bind("<Leave>", lambda e: btn.config(bg=THEME_COLOR))
         
-    for user in users:
-        if user.get_username() == username:
-            print(f"ERROR: User '{username}' already exists.")
-            return
+        return card
 
-    password = input("Enter password: ").strip()
-    if not password:
-        print("ERROR: Password cannot be empty.")
-        return
-        
-    role = input("Enter role (admin, waiter, chef): ").strip().lower()
-    if role not in ["admin", "waiter", "chef"]:
-        print("ERROR: Invalid role. Must be 'admin', 'waiter', or 'chef'.")
-        return
-
-    if role == "admin":
-        new_user = Admin(username, password)
-    elif role == "waiter":
-        new_user = Waiter(username, password)
-    elif role == "chef":
-        new_user = Chef(username, password)
-    else:
-        new_user = User(username, password, role)
-    
-    users.append(new_user)
-    save_users(users)
-    print(f"✓ Successfully added new user: {username} ({role.upper()})")
-
-def add_menu_item_manager():
-    print("\n--- ADD NEW MENU ITEM ---")
-    
-    item_id = input("Enter Item ID (e.g., F1): ").strip().upper()
-    if find_menu_item(item_id):
-        print("ERROR: Item ID already exists.")
-        return
-    
-    name = input("Enter Item Name: ").strip()
-    category = input("Enter Category (e.g., Food, Drinks): ").strip()
-    
-    try:
-        price = float(input("Enter Price: "))
-    except ValueError:
-        print("ERROR: Invalid price.")
-        return
-        
-    new_item = MenuItem(item_id, name, category, price)
-    MENU_ITEMS.append(new_item)
-    if save_menu_items(MENU_ITEMS):
-        print(f"✓ Added {name} to menu.")
-    else:
-        print("ERROR: Could not save menu.")
-
-def remove_menu_item_manager():
-    print("\n--- REMOVE MENU ITEM ---")
-    display_menu()
-    
-    item_id = input("\nEnter ID of item to remove: ").strip().upper()
-    
-    for i, item in enumerate(MENU_ITEMS):
-        if item.id == item_id:
-            confirm = input(f"Are you sure you want to delete {item.name}? (yes/no): ").lower()
-            if confirm == 'yes':
-                MENU_ITEMS.pop(i)
-                save_menu_items(MENU_ITEMS)
-                print(f"✓ Removed item {item_id}.")
-                return
-            else:
-                print("Deletion cancelled.")
-                return
-    
-    print("ERROR: Item ID not found.")
-
-def run_manager_cli():
-    global CURRENT_USER
-    if not login_user_flow(required_role="admin"):
-        return
-        
-    while True:
-        print("\n--- Manager Dashboard ---")
-        print(f"Welcome, {CURRENT_USER.get_username()}!")
-        print("-" * 30)
-        print("1. View All Users")
-        print("2. Add New User")
-        print("3. Add Menu Item")
-        print("4. Remove Menu Item")
-        print("5. Back to Main Menu (Keep Logged In)")
-        print("6. Logout")
-        print("-" * 30)
-        
-        choice = input("Enter your choice (1-6): ").strip()
-        
-        if choice == '1':
-            view_users()
-        elif choice == '2':
-            add_user()
-        elif choice == '3':
-            add_menu_item_manager()
-        elif choice == '4':
-            remove_menu_item_manager()
-        elif choice == '5':
-            print("Returning to main menu...")
-            break
-        elif choice == '6':
-            print(f"Logging out {CURRENT_USER.get_username()}...")
-            CURRENT_USER = None
-            break
-        else:
-            print("Invalid choice. Please try again.")
+    def open_login(self, role):
+        target_dashboard = self.dashboards.get(role)
+        open_login_window(self, role, target_dashboard)
 
 if __name__ == "__main__":
-    main_menu()
+    app = SmartChefApp()
+    app.mainloop()

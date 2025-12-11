@@ -5,11 +5,6 @@
         "role": "admin"
     },
     {
-        "username": "waiter",
-        "password": "W1234",
-        "role": "waiter"
-    },
-    {
         "username": "chef",
         "password": "Ch1234",
         "role": "chef"
@@ -18,5 +13,10 @@
         "username": "hassan",
         "password": "HA",
         "role": "admin"
+    },
+    {
+        "username": "zoz",
+        "password": "zoz",
+        "role": "waiter"
     }
 ]
