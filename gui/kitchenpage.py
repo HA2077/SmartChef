@@ -74,17 +74,15 @@ class KitchenDashboard(tk.Toplevel):
         self.after(1000, self.load_and_display_orders) 
 
     def load_and_display_orders(self):
-        # 1. Load Data (Pending or Processing only)
+        # 1. Load Data (Only show Pending or Processing)
+        # Completed orders are now in the JSON, but we filter them out here so they disappear from the UI.
         orders = [o for o in load_orders() if o.status in [OrderClass.PENDING, OrderClass.PROCESSING]]
         active_ids = set(o.order_id for o in orders)
         
-        # 2. CLEANUP: Remove widgets for orders that are gone (Completed/Deleted)
-        # using list() to safely modify dict while iterating
+        # 2. CLEANUP: Remove widgets for orders that are gone (Completed or not in list)
         for order_id in list(self.order_widgets.keys()):
             if order_id not in active_ids:
-                # Destroy UI element
                 self.order_widgets[order_id].destroy()
-                # Remove from tracking dicts
                 del self.order_widgets[order_id]
                 if order_id in self.last_statuses:
                     del self.last_statuses[order_id]
@@ -96,37 +94,23 @@ class KitchenDashboard(tk.Toplevel):
             prev_status = self.last_statuses.get(order.order_id)
             
             if order.order_id not in self.order_widgets:
-                # NEW ORDER: Create it
+                # NEW ORDER
                 self.create_ticket_frame(row, col, order)
                 self.last_statuses[order.order_id] = current_status
             
             elif current_status != prev_status:
-                # STATUS CHANGED: Re-render content (e.g. Button Text update)
+                # STATUS CHANGED (Re-render)
                 container = self.order_widgets[order.order_id]
                 self.render_ticket_content(container, order, is_new=False)
                 self.last_statuses[order.order_id] = current_status
-                
-                # Update Grid position in case it moved
                 container.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
             
             else:
-                # NO CHANGE: Just ensure grid position is correct (Do NOT re-render children)
-                # This prevents the flickering
+                # NO CHANGE (Just Grid)
                 container = self.order_widgets[order.order_id]
                 container.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
 
         self.start_refresh_timer()
-
-    def remove_order_from_json(self, order_id):
-        """Removes the completed order from orders.json"""
-        try:
-            orders = load_orders()
-            remaining_orders = [o for o in orders if o.order_id != order_id]
-            
-            with open("data/orders.json", "w") as f:
-                json.dump([o.to_dict() for o in remaining_orders], f, indent=4)
-        except Exception as e:
-            print(f"Error removing order from file: {e}")
 
     def change_order_status(self, order_id, new_status):
         orders = load_orders()
@@ -143,32 +127,28 @@ class KitchenDashboard(tk.Toplevel):
                         except ValueError as e:
                             print(f"Error generating receipt: {e}")
                         
-                        # 2. DELETE from JSON
-                        self.remove_order_from_json(order_id)
+                        # 2. SAVE status as COMPLETED (Do NOT delete from JSON)
+                        # This keeps the order in the file for records/admin view
+                        save_order(order)
                     else:
                         # Update status (e.g. to PROCESSING) and save
                         save_order(order)
                     
-                    # Force immediate refresh so UI responds instantly
+                    # Force immediate refresh
                     self.load_and_display_orders()
                     return
         print(f"Error: Could not find order {order_id}")
 
     def create_ticket_frame(self, row, col, order, is_new=False):
-        """Creates the container frame and then calls render_ticket_content"""
         container = tk.Frame(self.grid_frame, padx=2, pady=2)
         container.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
         self.order_widgets[order.order_id] = container
         self.render_ticket_content(container, order, is_new)
 
     def render_ticket_content(self, container, order: OrderClass, is_new: bool):
-        """Builds the inner content of the ticket. Only called on creation or status change."""
-        
-        # Clear existing children 
         for widget in container.winfo_children():
             widget.destroy()
 
-        # Determine Border Color
         border_color = "white"
         if order.status == OrderClass.PENDING: border_color = STATUS_PENDING
         elif order.status == OrderClass.PROCESSING: border_color = STATUS_PREP
@@ -179,21 +159,18 @@ class KitchenDashboard(tk.Toplevel):
             
         container.configure(bg=border_color)
 
-        # Inner Card
         card = tk.Frame(container, bg=CARD_COLOR, width=280, height=220)
         card.pack(fill="both", expand=True)
         card.pack_propagate(False)
 
-        # Order ID
         tk.Label(card, text=f"Order #{order.order_id[-4:]}", font=("Segoe UI", 9), bg=CARD_COLOR, fg="#CCC").place(x=15, y=10)
 
-        # --- DYNAMIC BUTTON LOGIC ---
+        # Button Logic
         if order.status == OrderClass.PENDING:
             next_status = OrderClass.PROCESSING
             next_text = "START PREP"
             btn_bg = STATUS_PREP 
         else:
-            # If status is Processing, next step is Complete
             next_status = OrderClass.COMPLETED
             next_text = "COMPLETE"
             btn_bg = STATUS_READY 
@@ -204,19 +181,15 @@ class KitchenDashboard(tk.Toplevel):
                                bg=btn_bg, fg="white", relief="flat", command=btn_cmd)
         action_btn.place(x=180, y=10, width=90, height=25)
 
-        # Table Name
         tk.Label(card, text=order.customer_id, font=("Segoe UI", 24, "bold"), bg=CARD_COLOR, fg="white").place(x=15, y=30)
 
-        # Items List
         item_list = [f"{item.quantity}x {item.name}" for item in order.items]
         items_text = "\n".join(item_list[:4]) + ("..." if len(item_list) > 4 else "")
         tk.Label(card, text=items_text, font=("Segoe UI", 10), bg=CARD_COLOR, fg="#EEE", justify="left").place(x=15, y=80)
 
-        # Time
         time_val = order.created_at.strftime('%H:%M')
         tk.Label(card, text=time_val, font=("Segoe UI", 18, "bold"), bg=CARD_COLOR, fg="white").place(x=200, y=85)
 
-        # Status Label
         status_lbl = tk.Label(card, text=order.status, font=("Segoe UI", 10, "bold"), 
                               bg=border_color, fg="black" if order.status=="Pending" else "white", width=15, pady=5)
         status_lbl.place(x=80, y=170)

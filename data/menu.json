@@ -70,5 +70,11 @@
         "name": "Bottle of Water",
         "category": "Extra",
         "price": 2.5
+    },
+    {
+        "id": "A6",
+        "name": "Shawrama jalapeno (ROSTO)",
+        "category": "Food",
+        "price": 69.0
     }
 ]

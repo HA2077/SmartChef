@@ -7,6 +7,7 @@ from gui.loginpage import open_login_window
 from gui.pospage import POSDashboard
 from gui.kitchenpage import KitchenDashboard
 from gui.adminpage import AdminDashboard
+from backend.order import clear_all_orders
 
 THEME_COLOR = "#800000" 
 TEXT_COLOR = "#FFFFFF" 
@@ -27,6 +28,9 @@ class SmartChefApp(tk.Tk):
             self.state('zoomed') 
         except:
             self.geometry("1280x800")
+            
+        # Bind the window close event to the cleanup function
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
         
         self.dashboards = {}
         self.preload_dashboards()
@@ -51,6 +55,15 @@ class SmartChefApp(tk.Tk):
         self.card_waiter = self.create_card_frame("Waiter", "assets/Waiter.png")
         self.card_chef = self.create_card_frame("Chef", "assets/Chef.png")
         self.bind("<Configure>", self.resize_layout)
+
+    def on_closing(self):
+        try:
+            print("Cleaning up orders...")
+            clear_all_orders()
+        except Exception as e:
+            print(f"Error during cleanup: {e}")
+        finally:
+            self.destroy()
 
     def preload_dashboards(self):
         print("Preloading dashboards...")
