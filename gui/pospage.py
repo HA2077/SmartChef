@@ -5,12 +5,13 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from backend.menuitem import load_menu_items
-from backend.order import Order, save_order, Order as OrderClass 
+from backend.order import Order, save_order 
 
 BG_COLOR = "#2B0505"        
 SECTION_BG = "#550a0a"     
 BTN_RED = "#AA3333"       
 TEXT_WHITE = "#FFFFFF"
+HIGHLIGHT_COLOR = "#884444" # Color for selected item
 
 class POSDashboard(tk.Toplevel):
     def __init__(self, parent=None):
@@ -23,6 +24,9 @@ class POSDashboard(tk.Toplevel):
         self.menu_items = load_menu_items() 
         self.menu_data = {} 
         self.organize_menu_data()
+        
+        # Track selected item for removal
+        self.selected_product_id = None
 
         self.bg_image_original = None
         self.bg_photo = None
@@ -151,11 +155,34 @@ class POSDashboard(tk.Toplevel):
         self.current_order.add_item(item.id, item.name, item.price, 1)
         self.refresh_order_display()
 
+    def select_item(self, product_id):
+        """Selects an item in the order list"""
+        if self.selected_product_id == product_id:
+            self.selected_product_id = None # Deselect if clicked again
+        else:
+            self.selected_product_id = product_id
+        self.refresh_order_display()
+
+    def remove_selected_item(self):
+        if not self.selected_product_id:
+            messagebox.showwarning("Selection", "Please select an item to remove.")
+            return
+        
+        self.current_order.remove_item(self.selected_product_id)
+        # Check if the item is completely gone from the order, if so, clear selection
+        still_exists = any(i.product_id == self.selected_product_id for i in self.current_order.items)
+        if not still_exists:
+            self.selected_product_id = None
+            
+        self.refresh_order_display()
+        self.update_totals()
+
     def cancel_order(self):
         if not self.current_order.items:
             return
         if messagebox.askyesno("Cancel Order", "Are you sure you want to clear the current order?"):
             self.current_order.clear_order()
+            self.selected_product_id = None
             self.refresh_order_display()
             self.update_totals()
 
@@ -171,12 +198,13 @@ class POSDashboard(tk.Toplevel):
             return
 
         self.current_order.customer_id = f"Table {table_num}"
-        self.current_order.update_status(OrderClass.PENDING)
+        self.current_order.update_status(Order.PENDING)
 
         save_order(self.current_order)
         messagebox.showinfo("Order Sent", f"Order sent to Kitchen for Table {table_num}!")
         
         self.current_order = Order("Walk-in") 
+        self.selected_product_id = None
         self.entry_table.delete(0, tk.END)
         self.refresh_order_display()
 
@@ -214,14 +242,27 @@ class POSDashboard(tk.Toplevel):
             widget.destroy()
 
         for item in self.current_order.items:
-            row = tk.Frame(self.order_list_frame, bg=SECTION_BG)
+            # Determine background color based on selection
+            bg_color = HIGHLIGHT_COLOR if item.product_id == self.selected_product_id else SECTION_BG
+            
+            row = tk.Frame(self.order_list_frame, bg=bg_color)
             row.pack(fill="x", pady=2)
+            
+            # Make the row clickable
+            row.bind("<Button-1>", lambda e, pid=item.product_id: self.select_item(pid))
             
             txt_left = f"{item.quantity}x   {item.name}"
             txt_right = f"${item.subtotal:.2f}"
             
-            tk.Label(row, text=txt_left, bg=SECTION_BG, fg="white", font=("Segoe UI", 11)).pack(side="left", padx=5)
-            tk.Label(row, text=txt_right, bg=SECTION_BG, fg="white", font=("Segoe UI", 11)).pack(side="right", padx=20)
+            lbl_left = tk.Label(row, text=txt_left, bg=bg_color, fg="white", font=("Segoe UI", 11))
+            lbl_left.pack(side="left", padx=5)
+            
+            lbl_right = tk.Label(row, text=txt_right, bg=bg_color, fg="white", font=("Segoe UI", 11))
+            lbl_right.pack(side="right", padx=20)
+            
+            # Make labels transparent to clicks (pass event to row)
+            lbl_left.bind("<Button-1>", lambda e, pid=item.product_id: self.select_item(pid))
+            lbl_right.bind("<Button-1>", lambda e, pid=item.product_id: self.select_item(pid))
 
         self.update_totals()
 
@@ -246,17 +287,28 @@ class POSDashboard(tk.Toplevel):
         self.lbl_total_val = self.add_total_row("Total:", "$0.00", 22, bold=True)
 
         # Buttons
-        # Send to Kitchen (Bottom)
+        
+        # 1. Send to Kitchen (Bottom)
         btn_send = tk.Button(self.frame_checkout, text="SEND TO\nKITCHEN", bg="#CC3333", fg="white",
                          font=("Segoe UI", 16, "bold"), relief="flat", height=3, cursor="hand2",
                          command=self.submit_order_to_kitchen)
         btn_send.pack(side="bottom", fill="x", pady=(10, 0))
 
-        # Cancel Order (Above Send)
-        btn_cancel = tk.Button(self.frame_checkout, text="CANCEL ORDER", bg="#FF5555", fg="white",
-                         font=("Segoe UI", 12, "bold"), relief="flat", height=2, cursor="hand2",
+        # 2. Control Buttons Container (Above Send)
+        ctrl_frame = tk.Frame(self.frame_checkout, bg=SECTION_BG)
+        ctrl_frame.pack(side="bottom", fill="x", pady=(0, 10))
+
+        # Cancel Order
+        btn_cancel = tk.Button(ctrl_frame, text="CANCEL ORDER", bg="#FF5555", fg="white",
+                         font=("Segoe UI", 10, "bold"), relief="flat", height=2, cursor="hand2",
                          command=self.cancel_order)
-        btn_cancel.pack(side="bottom", fill="x", pady=(0, 10))
+        btn_cancel.pack(side="left", fill="x", expand=True, padx=(0, 5))
+        
+        # Remove Item
+        btn_remove = tk.Button(ctrl_frame, text="REMOVE ITEM", bg="#FF8800", fg="white",
+                         font=("Segoe UI", 10, "bold"), relief="flat", height=2, cursor="hand2",
+                         command=self.remove_selected_item)
+        btn_remove.pack(side="right", fill="x", expand=True, padx=(5, 0))
 
     def add_total_row(self, label, value, size, bold=False):
         font_style = ("Segoe UI", size, "bold" if bold else "normal")

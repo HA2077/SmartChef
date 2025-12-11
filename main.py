@@ -23,13 +23,17 @@ class SmartChefApp(tk.Tk):
         self.title("SmartChef System")
         self.resizable(True, True)
         self.minsize(1000, 700)
+
+        icon_path = "assets/SC.png" 
+        if os.path.exists(icon_path):
+            try:
+                icon_img = tk.PhotoImage(file=icon_path)
+                self.iconphoto(True, icon_img)
+            except Exception as e:
+                print(f"Error loading app icon: {e}")
         
-        try:
-            self.state('zoomed') 
-        except:
-            self.geometry("1280x800")
+        self.maximize_me()
             
-        # Bind the window close event to the cleanup function
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
         
         self.dashboards = {}
@@ -55,6 +59,26 @@ class SmartChefApp(tk.Tk):
         self.card_waiter = self.create_card_frame("Waiter", "assets/Waiter.png")
         self.card_chef = self.create_card_frame("Chef", "assets/Chef.png")
         self.bind("<Configure>", self.resize_layout)
+
+    def maximize_me(self):
+        try:
+            self.state('zoomed') 
+            return
+        except tk.TclError:
+            pass
+            
+        try:
+            self.attributes('-zoomed', True)
+            return
+        except tk.TclError:
+            pass
+
+        try:
+            w = self.winfo_screenwidth()
+            h = self.winfo_screenheight()
+            self.geometry(f"{w}x{h}+0+0")
+        except:
+            self.geometry("1280x800")
 
     def on_closing(self):
         try:
@@ -89,7 +113,8 @@ class SmartChefApp(tk.Tk):
     def hide_dashboard(self, window):
         window.withdraw()
         self.deiconify()
-        self.state('zoomed')
+        # Maximize main window again when returning
+        self.maximize_me()
 
     def load_background(self):
         bg_path = "assets/BG.jpg"
