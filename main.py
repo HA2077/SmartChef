@@ -1,6 +1,5 @@
 import tkinter as tk
 from tkinter import messagebox 
-from PIL import Image, ImageTk 
 import os
 import sys
 from gui.loginpage import open_login_window
@@ -24,7 +23,8 @@ class SmartChefApp(tk.Tk):
         self.resizable(True, True)
         self.minsize(1000, 700)
 
-        icon_path = "assets/SC.png" 
+        # 1. LOAD APP ICON
+        icon_path = ("assets/SC.png") 
         if os.path.exists(icon_path):
             try:
                 icon_img = tk.PhotoImage(file=icon_path)
@@ -42,11 +42,9 @@ class SmartChefApp(tk.Tk):
         self.canvas = tk.Canvas(self, bg=THEME_COLOR, highlightthickness=0)
         self.canvas.pack(fill="both", expand=True)
         
-        self.bg_image_id = None
-        self.title_id = None
-        self.subtitle_id = None
-        self.bg_image_original = None
-        self.bg_photo = None
+        # 2. LOAD BACKGROUND
+        self.bg_image_obj = None
+        self.bg_id = None
         self.load_background()
         
         self.title_id = self.canvas.create_text(0, 0, text="Welcome to SmartChef", 
@@ -55,9 +53,10 @@ class SmartChefApp(tk.Tk):
         self.subtitle_id = self.canvas.create_text(0, 0, text="Select your role to continue", 
                                                    font=FONT_SUB, fill="#DDDDDD", anchor="center")
 
-        self.card_manager = self.create_card_frame("Manager", "assets/Manager.png")
-        self.card_waiter = self.create_card_frame("Waiter", "assets/Waiter.png")
-        self.card_chef = self.create_card_frame("Chef", "assets/Chef.png")
+        self.card_manager = self.create_card_frame("Manager", "assets/Manager.png", scale=4)
+        self.card_waiter = self.create_card_frame("Waiter", "assets/Waiter.png", scale=4)
+        self.card_chef = self.create_card_frame("Chef", "assets/Chef.png", scale=2)
+        
         self.bind("<Configure>", self.resize_layout)
 
     def maximize_me(self):
@@ -66,13 +65,11 @@ class SmartChefApp(tk.Tk):
             return
         except tk.TclError:
             pass
-            
         try:
             self.attributes('-zoomed', True)
             return
         except tk.TclError:
             pass
-
         try:
             w = self.winfo_screenwidth()
             h = self.winfo_screenheight()
@@ -91,20 +88,16 @@ class SmartChefApp(tk.Tk):
 
     def preload_dashboards(self):
         print("Preloading dashboards...")
-        
-        # 1. Waiter / POS
         pos = POSDashboard(self)
         pos.withdraw()
         pos.protocol("WM_DELETE_WINDOW", lambda: self.hide_dashboard(pos))
         self.dashboards["Waiter"] = pos
         
-        # 2. Chef / Kitchen
         kitchen = KitchenDashboard(self)
         kitchen.withdraw()
         kitchen.protocol("WM_DELETE_WINDOW", lambda: self.hide_dashboard(kitchen))
         self.dashboards["Chef"] = kitchen
         
-        # 3. Manager / Admin
         admin = AdminDashboard(self)
         admin.withdraw()
         admin.protocol("WM_DELETE_WINDOW", lambda: self.hide_dashboard(admin))
@@ -116,10 +109,12 @@ class SmartChefApp(tk.Tk):
         self.focus_force()
 
     def load_background(self):
-        bg_path = "assets/BG.jpg"
+        bg_path = ("assets/BG.png")
         if os.path.exists(bg_path):
             try:
-                self.bg_image_original = Image.open(bg_path)
+                self.bg_image_obj = tk.PhotoImage(file=bg_path)
+                self.bg_id = self.canvas.create_image(0, 0, image=self.bg_image_obj, anchor="nw")
+                self.canvas.tag_lower(self.bg_id)
             except Exception as e:
                 print(f"Error loading background: {e}")
 
@@ -127,37 +122,38 @@ class SmartChefApp(tk.Tk):
         w = self.winfo_width()
         h = self.winfo_height()
         
-        if w < 100 or h < 100: return
-        if self.bg_image_original:
-            resized = self.bg_image_original.resize((w, h), Image.Resampling.LANCZOS)
-            self.bg_photo = ImageTk.PhotoImage(resized)
-            
-            if self.bg_image_id:
-                self.canvas.itemconfig(self.bg_image_id, image=self.bg_photo)
-            else:
-                self.bg_image_id = self.canvas.create_image(0, 0, image=self.bg_photo, anchor="nw")
-                self.canvas.tag_lower(self.bg_image_id)
-
         self.canvas.coords(self.title_id, w/2, h * 0.15)
         self.canvas.coords(self.subtitle_id, w/2, h * 0.22)
+        
         card_y = h * 0.60 
-        self.card_manager.place(x=w*0.25, y=card_y, anchor="center", width=280, height=380)
-        self.card_waiter.place(x=w*0.50, y=card_y, anchor="center", width=280, height=380)
-        self.card_chef.place(x=w*0.75, y=card_y, anchor="center", width=280, height=380)
+        
+        col_1 = w * 0.25
+        col_2 = w * 0.50
+        col_3 = w * 0.75
+        
+        self.card_manager.place(x=col_1, y=card_y, anchor="center", width=280, height=380)
+        self.card_waiter.place(x=col_2, y=card_y, anchor="center", width=280, height=380)
+        self.card_chef.place(x=col_3, y=card_y, anchor="center", width=280, height=380)
 
-    def create_card_frame(self, role, icon_path):
+    def create_card_frame(self, role, relative_icon_path, scale=4):
         card = tk.Frame(self, bg="white", padx=20, pady=30, relief="raised", bd=2)
         
-        if os.path.exists(icon_path):
+        full_path = (relative_icon_path)
+        
+        if os.path.exists(full_path):
             try:
-                img = Image.open(icon_path)
-                img = img.resize((120, 120), Image.Resampling.LANCZOS)
-                photo = ImageTk.PhotoImage(img)
+                original_image = tk.PhotoImage(file=full_path)
+                photo = original_image.subsample(scale, scale) 
+                
+                if not hasattr(self, "card_icons"):
+                    self.card_icons = []
+                self.card_icons.append(photo)
+                self.card_icons.append(original_image)
                 
                 icon_lbl = tk.Label(card, image=photo, bg="white")
-                icon_lbl.image = photo 
                 icon_lbl.pack(pady=(10, 20))
-            except:
+            except Exception as e:
+                print(f"Image load error for {role}: {e}")
                 tk.Label(card, text=role[0], font=("Segoe UI", 60), bg="white").pack(pady=20)
         else:
             tk.Label(card, text=role[0], font=("Segoe UI", 60, "bold"), 
@@ -165,6 +161,7 @@ class SmartChefApp(tk.Tk):
             
         tk.Label(card, text=role, font=FONT_CARD_TITLE, bg="white", fg="#333").pack(pady=(0, 5))
         tk.Frame(card, bg=THEME_COLOR, height=3, width=60).pack(pady=(0, 25))
+        
         btn = tk.Button(card, text="LOGIN", font=FONT_BTN,
                         bg=THEME_COLOR, fg="white", 
                         activebackground="#A52A2A", activeforeground="white",
@@ -184,11 +181,6 @@ class SmartChefApp(tk.Tk):
         if target_dashboard.state() != "withdrawn":
             target_dashboard.lift()
             target_dashboard.focus_force()
-            try:
-                target_dashboard.attributes('-topmost', True)
-                target_dashboard.after(100, lambda: target_dashboard.attributes('-topmost', False))
-            except:
-                pass
 
 if __name__ == "__main__":
     app = SmartChefApp()
