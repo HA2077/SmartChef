@@ -1,15 +1,5 @@
 [
     {
-        "username": "admin",
-        "password": "Ad1234",
-        "role": "admin"
-    },
-    {
-        "username": "chef",
-        "password": "Ch1234",
-        "role": "chef"
-    },
-    {
         "username": "hassan",
         "password": "HA",
         "role": "admin"
@@ -18,5 +8,15 @@
         "username": "zoz",
         "password": "zoz",
         "role": "waiter"
+    },
+    {
+        "username": "Abr7",
+        "password": "1234",
+        "role": "chef"
+    },
+    {
+        "username": "Abdullah",
+        "password": "6967",
+        "role": "chef"
     }
 ]
