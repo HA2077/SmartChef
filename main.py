@@ -112,9 +112,8 @@ class SmartChefApp(tk.Tk):
 
     def hide_dashboard(self, window):
         window.withdraw()
-        self.deiconify()
-        # Maximize main window again when returning
-        self.maximize_me()
+        self.lift()
+        self.focus_force()
 
     def load_background(self):
         bg_path = "assets/BG.jpg"
@@ -181,6 +180,15 @@ class SmartChefApp(tk.Tk):
     def open_login(self, role):
         target_dashboard = self.dashboards.get(role)
         open_login_window(self, role, target_dashboard)
+        
+        if target_dashboard.state() != "withdrawn":
+            target_dashboard.lift()
+            target_dashboard.focus_force()
+            try:
+                target_dashboard.attributes('-topmost', True)
+                target_dashboard.after(100, lambda: target_dashboard.attributes('-topmost', False))
+            except:
+                pass
 
 if __name__ == "__main__":
     app = SmartChefApp()

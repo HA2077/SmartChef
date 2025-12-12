@@ -71,8 +71,8 @@ class Receipt:
             receipt_lines.append(
                 f"{item.name[:19]:<20} "
                 f"{item.quantity:>5} "
-                f"${item.price:>7.2f} "
-                f"${item.subtotal:>9.2f}"
+                f"{item.price:>7.2f}$ "
+                f"{item.subtotal:>9.2f}$"
             )
         
         receipt_lines.append("-" * 50)
