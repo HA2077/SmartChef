@@ -111,6 +111,3 @@ A massive thank you to my incredible teammates for their hard work, dedication, 
 * **Ziad**
 
 We built this application from the ground up, and I couldn't have asked for a better team!
-
----
-**Made with ❤️ for Coding**
