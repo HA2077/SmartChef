@@ -3,7 +3,6 @@ import time
 import sys
 import os
 import json
-from PIL import Image, ImageTk 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from backend.order import load_orders, Order as OrderClass, save_order
 from backend.receipt import Receipt
@@ -13,9 +12,9 @@ CARD_COLOR = "#450A0A"
 TEXT_WHITE = "#FFFFFF"
 
 # Status Colors
-STATUS_PENDING = "#FFC107"  # Yellow
-STATUS_PREP = "#0D6EFD"     # Blue (Processing)
-STATUS_READY = "#198754"    # Green (Ready to Complete)
+STATUS_PENDING = "#FFC107"  
+STATUS_PREP = "#0D6EFD"     
+STATUS_READY = "#198754"    
 
 class KitchenDashboard(tk.Toplevel):
     def __init__(self, parent=None):
@@ -24,15 +23,13 @@ class KitchenDashboard(tk.Toplevel):
         self.geometry("1200x800")
         self.configure(bg=BG_COLOR)
         
-        # --- Background Image Setup ---
-        self.bg_image_original = None
         self.bg_photo = None
         self.bg_label = tk.Label(self, bg=BG_COLOR)
         self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
         self.load_background()
         
-        self.order_widgets = {}   # Maps order_id -> container_frame
-        self.last_statuses = {}   # Maps order_id -> status (Prevents flickering)
+        self.order_widgets = {}   
+        self.last_statuses = {}   
         
         # Header 
         self.header = tk.Frame(self, bg=BG_COLOR, height=60)
@@ -49,37 +46,28 @@ class KitchenDashboard(tk.Toplevel):
         self.load_and_display_orders()
         self.start_refresh_timer()
         
-        self.bind("<Configure>", self.resize_background)
+        # No binding for resizing anymore
 
     def load_background(self):
-        bg_path = "assets/BG.jpg"
+        # CHANGED: Using BG.png and tk.PhotoImage
+        bg_path = ("assets/BG.png")
         if os.path.exists(bg_path):
             try:
-                self.bg_image_original = Image.open(bg_path)
-                self.resize_background(None)
+                self.bg_photo = tk.PhotoImage(file=bg_path)
+                self.bg_label.config(image=self.bg_photo)
+                self.bg_label.lower()
             except Exception as e:
                 print(f"Error loading background: {e}")
 
-    def resize_background(self, event):
-        if self.bg_image_original:
-            w = self.winfo_width()
-            h = self.winfo_height()
-            if w > 0 and h > 0:
-                resized = self.bg_image_original.resize((w, h), Image.Resampling.LANCZOS)
-                self.bg_photo = ImageTk.PhotoImage(resized)
-                self.bg_label.config(image=self.bg_photo)
-                self.bg_label.lower()
+    # No resize_background method needed
 
     def start_refresh_timer(self):
         self.after(1000, self.load_and_display_orders) 
 
     def load_and_display_orders(self):
-        # 1. Load Data (Only show Pending or Processing)
-        # Completed orders are now in the JSON, but we filter them out here so they disappear from the UI.
         orders = [o for o in load_orders() if o.status in [OrderClass.PENDING, OrderClass.PROCESSING]]
         active_ids = set(o.order_id for o in orders)
         
-        # 2. CLEANUP: Remove widgets for orders that are gone (Completed or not in list)
         for order_id in list(self.order_widgets.keys()):
             if order_id not in active_ids:
                 self.order_widgets[order_id].destroy()
@@ -87,26 +75,22 @@ class KitchenDashboard(tk.Toplevel):
                 if order_id in self.last_statuses:
                     del self.last_statuses[order_id]
 
-        # 3. UPDATE/CREATE: Render active orders
         for i, order in enumerate(orders):
             row, col = divmod(i, 4)
             current_status = order.status
             prev_status = self.last_statuses.get(order.order_id)
             
             if order.order_id not in self.order_widgets:
-                # NEW ORDER
                 self.create_ticket_frame(row, col, order)
                 self.last_statuses[order.order_id] = current_status
             
             elif current_status != prev_status:
-                # STATUS CHANGED (Re-render)
                 container = self.order_widgets[order.order_id]
                 self.render_ticket_content(container, order, is_new=False)
                 self.last_statuses[order.order_id] = current_status
                 container.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
             
             else:
-                # NO CHANGE (Just Grid)
                 container = self.order_widgets[order.order_id]
                 container.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
 
@@ -117,24 +101,17 @@ class KitchenDashboard(tk.Toplevel):
         for i, order in enumerate(orders):
             if order.order_id == order_id:
                 if order.update_status(new_status):
-                    
                     if new_status == OrderClass.COMPLETED:
-                        # 1. Generate Receipt
                         try:
                             receipt = Receipt(order)
                             filename = receipt.save_to_file()
                             print(f"Receipt generated: {filename}")
                         except ValueError as e:
                             print(f"Error generating receipt: {e}")
-                        
-                        # 2. SAVE status as COMPLETED (Do NOT delete from JSON)
-                        # This keeps the order in the file for records/admin view
                         save_order(order)
                     else:
-                        # Update status (e.g. to PROCESSING) and save
                         save_order(order)
                     
-                    # Force immediate refresh
                     self.load_and_display_orders()
                     return
         print(f"Error: Could not find order {order_id}")
@@ -165,7 +142,6 @@ class KitchenDashboard(tk.Toplevel):
 
         tk.Label(card, text=f"Order #{order.order_id[-4:]}", font=("Segoe UI", 9), bg=CARD_COLOR, fg="#CCC").place(x=15, y=10)
 
-        # Button Logic
         if order.status == OrderClass.PENDING:
             next_status = OrderClass.PROCESSING
             next_text = "START PREP"

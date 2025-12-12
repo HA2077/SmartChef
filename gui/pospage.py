@@ -1,6 +1,5 @@
 import tkinter as tk
 from tkinter import messagebox
-from PIL import Image, ImageTk
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -11,7 +10,7 @@ BG_COLOR = "#2B0505"
 SECTION_BG = "#550a0a"     
 BTN_RED = "#AA3333"       
 TEXT_WHITE = "#FFFFFF"
-HIGHLIGHT_COLOR = "#884444" # Color for selected item
+HIGHLIGHT_COLOR = "#884444" 
 
 class POSDashboard(tk.Toplevel):
     def __init__(self, parent=None):
@@ -24,11 +23,9 @@ class POSDashboard(tk.Toplevel):
         self.menu_items = load_menu_items() 
         self.menu_data = {} 
         self.organize_menu_data()
-        
-        # Track selected item for removal
         self.selected_product_id = None
 
-        self.bg_image_original = None
+        # --- Background (Static PNG) ---
         self.bg_photo = None
         self.bg_label = tk.Label(self, bg=BG_COLOR)
         self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
@@ -55,26 +52,17 @@ class POSDashboard(tk.Toplevel):
         self.frame_checkout.pack(side="right", fill="y", padx=(5, 20), pady=20)
         self.frame_checkout.pack_propagate(False)
         self.build_checkout_section()
-        self.bind("<Configure>", self.resize_background)
+        
 
     def load_background(self):
-        bg_path = "assets/BG.jpg"
+        bg_path = ("assets/BG.png")
         if os.path.exists(bg_path):
             try:
-                self.bg_image_original = Image.open(bg_path)
-                self.resize_background(None)
-            except Exception as e:
-                print(f"Error loading background: {e}")
-
-    def resize_background(self, event):
-        if self.bg_image_original:
-            w = self.winfo_width()
-            h = self.winfo_height()
-            if w > 0 and h > 0:
-                resized = self.bg_image_original.resize((w, h), Image.Resampling.LANCZOS)
-                self.bg_photo = ImageTk.PhotoImage(resized)
+                self.bg_photo = tk.PhotoImage(file=bg_path)
                 self.bg_label.config(image=self.bg_photo)
                 self.bg_label.lower()
+            except Exception as e:
+                print(f"Error loading background: {e}")
 
     def organize_menu_data(self):
         self.menu_data = {}
@@ -156,9 +144,8 @@ class POSDashboard(tk.Toplevel):
         self.refresh_order_display()
 
     def select_item(self, product_id):
-        """Selects an item in the order list"""
         if self.selected_product_id == product_id:
-            self.selected_product_id = None # Deselect if clicked again
+            self.selected_product_id = None
         else:
             self.selected_product_id = product_id
         self.refresh_order_display()
@@ -169,7 +156,6 @@ class POSDashboard(tk.Toplevel):
             return
         
         self.current_order.remove_item(self.selected_product_id)
-        # Check if the item is completely gone from the order, if so, clear selection
         still_exists = any(i.product_id == self.selected_product_id for i in self.current_order.items)
         if not still_exists:
             self.selected_product_id = None
@@ -209,7 +195,6 @@ class POSDashboard(tk.Toplevel):
         self.refresh_order_display()
 
     def build_order_section(self):
-        # -- Table Number Input --
         table_frame = tk.Frame(self.frame_order, bg=SECTION_BG)
         table_frame.pack(fill="x", pady=(0, 10))
         
@@ -219,7 +204,6 @@ class POSDashboard(tk.Toplevel):
 
         tk.Label(self.frame_order, text="CURRENT ORDER", font=("Segoe UI", 14, "bold"), bg=SECTION_BG, fg="white").pack(pady=(0, 10))
 
-        # Header with Fixed Alignment
         hdr = tk.Frame(self.frame_order, bg=SECTION_BG)
         hdr.pack(fill="x")
         
@@ -242,13 +226,11 @@ class POSDashboard(tk.Toplevel):
             widget.destroy()
 
         for item in self.current_order.items:
-            # Determine background color based on selection
             bg_color = HIGHLIGHT_COLOR if item.product_id == self.selected_product_id else SECTION_BG
             
             row = tk.Frame(self.order_list_frame, bg=bg_color)
             row.pack(fill="x", pady=2)
             
-            # Make the row clickable
             row.bind("<Button-1>", lambda e, pid=item.product_id: self.select_item(pid))
             
             txt_left = f"{item.quantity}x   {item.name}"
@@ -260,7 +242,6 @@ class POSDashboard(tk.Toplevel):
             lbl_right = tk.Label(row, text=txt_right, bg=bg_color, fg="white", font=("Segoe UI", 11))
             lbl_right.pack(side="right", padx=20)
             
-            # Make labels transparent to clicks (pass event to row)
             lbl_left.bind("<Button-1>", lambda e, pid=item.product_id: self.select_item(pid))
             lbl_right.bind("<Button-1>", lambda e, pid=item.product_id: self.select_item(pid))
 
@@ -275,7 +256,6 @@ class POSDashboard(tk.Toplevel):
         self.lbl_tax_val.config(text=f"${tax:.2f}")
         self.lbl_total_val.config(text=f"${total:.2f}")
 
-    # --- Checkout Section ---
     def build_checkout_section(self):
         tk.Label(self.frame_checkout, text="CHECKOUT", font=("Segoe UI", 14, "bold"), bg=SECTION_BG, fg="white").pack(pady=(0, 20))
 
@@ -286,25 +266,19 @@ class POSDashboard(tk.Toplevel):
         
         self.lbl_total_val = self.add_total_row("Total:", "$0.00", 22, bold=True)
 
-        # Buttons
-        
-        # 1. Send to Kitchen (Bottom)
         btn_send = tk.Button(self.frame_checkout, text="SEND TO\nKITCHEN", bg="#CC3333", fg="white",
                          font=("Segoe UI", 16, "bold"), relief="flat", height=3, cursor="hand2",
                          command=self.submit_order_to_kitchen)
         btn_send.pack(side="bottom", fill="x", pady=(10, 0))
 
-        # 2. Control Buttons Container (Above Send)
         ctrl_frame = tk.Frame(self.frame_checkout, bg=SECTION_BG)
         ctrl_frame.pack(side="bottom", fill="x", pady=(0, 10))
 
-        # Cancel Order
         btn_cancel = tk.Button(ctrl_frame, text="CANCEL ORDER", bg="#FF5555", fg="white",
                          font=("Segoe UI", 10, "bold"), relief="flat", height=2, cursor="hand2",
                          command=self.cancel_order)
         btn_cancel.pack(side="left", fill="x", expand=True, padx=(0, 5))
         
-        # Remove Item
         btn_remove = tk.Button(ctrl_frame, text="REMOVE ITEM", bg="#FF8800", fg="white",
                          font=("Segoe UI", 10, "bold"), relief="flat", height=2, cursor="hand2",
                          command=self.remove_selected_item)
