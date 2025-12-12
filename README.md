@@ -1,8 +1,8 @@
 # 🧑‍🍳 SmartChef Restaurant System
 
-[![Python](https://img.shields.io/badge/Python-3.x-blue?style=flat-square&logo=python)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.12.3-blue?style=flat-square&logo=python)](https://www.python.org/)
 [![Framework](https://img.shields.io/badge/Framework-Tkinter-brightgreen?style=flat-square&logo=tcl)](https://docs.python.org/3/library/tkinter.html)
-[![Status](https://imgimg.shields.io/badge/Status-Ready%20to%20Use-success?style=flat-square)]()
+[![Status](https://img.shields.io/badge/Status-Ready%20to%20Use-success?style=flat-square)]()
 
 A comprehensive restaurant management solution developed in Python for our Object-Oriented Programming (OOP) course. SmartChef provides distinct dashboards for managerial oversight, order fulfillment, and kitchen preparation, ensuring a smooth operational flow.
 
@@ -31,14 +31,14 @@ SmartChef is designed to cover the three main pillars of a modern restaurant:
 
 ## 💻 Tech Stack
 
-* **Language:** Python 3.x
+* **Language:** Python 3.12.3
 * **GUI Framework:** Tkinter (No external image libraries used for better Linux/Windows binary compatibility)
 * **Bundling:** PyInstaller (for cross-platform executables)
 
 ## ⬇️ Installation
 
 ### Prerequisites
-* Python 3.x
+* Python 3.12.3
 
 ### Executables (Recommended)
 Download the pre-built binaries from the [GitHub Releases] page:
@@ -48,7 +48,7 @@ Download the pre-built binaries from the [GitHub Releases] page:
 ### From Source
 1.  Clone the repository:
     ```bash
-    git clone [Your Repository URL]
+    git clone https://github.com/HA2077/SmartChef
     cd SmartChef
     ```
 2.  Run the main application:
@@ -96,6 +96,7 @@ We have identified several key areas for future development to enhance the stabi
 * **C++ Integration for Queue (DSA):** Implement the core order processing queue using C++ for maximum performance, leveraging Data Structures and Algorithms (DSA) principles to handle order flow efficiently under high load.
 * **Network Capabilities:** Implement client-server architecture so POS, Kitchen, and Admin dashboards can operate on separate devices.
 * **Advanced Analytics:** Add features like trend analysis, labor cost reporting, and inventory management.
+* **Modern GUI Framework:** Transition from Tkinter to a more modern GUI library (like PyQt, Kivy, or CustomTkinter) to improve the user interface aesthetic and modern look.
 
 ---
 
