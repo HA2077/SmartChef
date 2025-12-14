@@ -9,7 +9,6 @@ from backend.order import load_orders, Order as OrderClass
 from backend.user import load_users, save_users, Admin, Waiter, Chef, User
 from backend.menuitem import load_menu_items, save_menu_items, MenuItem
 
-# --- COLORS ---
 BG_COLOR = "#2B0505"       
 SIDEBAR_COLOR = "#450A0A"  
 CARD_COLOR = "#6A0D0D"     
@@ -26,26 +25,23 @@ class AdminDashboard(tk.Toplevel):
         self.geometry("1200x800")
         self.configure(bg=BG_COLOR)
 
-        # Sidebar
         self.sidebar = tk.Frame(self, bg=SIDEBAR_COLOR, width=80)
         self.sidebar.pack(side="left", fill="y")
         self.sidebar.pack_propagate(False)
         self.build_sidebar_icons()
 
-        # Main Content
         self.main_area = tk.Frame(self, bg=BG_COLOR, padx=20, pady=20)
         self.main_area.pack(side="right", fill="both", expand=True)
 
         self.stat_labels = {}
         self.table_scrollable_frame = None 
         self.last_table_hash = None        
-        self.table_window_id = None # Store ID to resize window
+        self.table_window_id = None
 
         self.build_stats_row()
         self.build_queue_section()
         self.build_table_structure()       
 
-        # Start auto-refresh
         self.refresh_timer()
 
     def build_sidebar_icons(self):
@@ -68,9 +64,6 @@ class AdminDashboard(tk.Toplevel):
             elif icon == "📊":
                 btn.bind("<Button-1>", self.open_reports_analytics)
 
-    # ----------------------
-    # Live Stats
-    # ----------------------
     def build_stats_row(self):
         stats_frame = tk.Frame(self.main_area, bg=BG_COLOR)
         stats_frame.pack(fill="x", pady=(0, 10))
@@ -102,9 +95,6 @@ class AdminDashboard(tk.Toplevel):
         except Exception:
             pass
 
-    # ----------------------
-    # Live Queue Section
-    # ----------------------
     def build_queue_section(self):
         queue_label = tk.Label(self.main_area, text="LIVE KITCHEN QUEUE",
                               font=("Segoe UI", 12, "bold"), bg=BG_COLOR, fg=TEXT_WHITE)
@@ -143,7 +133,6 @@ class AdminDashboard(tk.Toplevel):
             items_count = len(order.items)
             status_text = order.status
 
-            # Draw Card
             self.kitchen_canvas.create_rectangle(x_offset, y_offset, x_offset + card_w, y_offset + card_h, 
                                     fill="#450A0A", outline="#FF6B6B")
             
@@ -158,21 +147,16 @@ class AdminDashboard(tk.Toplevel):
 
             x_offset += card_w + 10
 
-    # ----------------------
-    # Orders Table (GRID LAYOUT FIX)
-    # ----------------------
     def build_table_structure(self):
         headers = ["DATE & TIME", "CUSTOMER", "ITEMS", "TOTAL", "STATUS"]
 
         table_frame = tk.Frame(self.main_area, bg=CARD_COLOR, padx=20, pady=20)
         table_frame.pack(fill="both", expand=True)
 
-        # -- HEADERS (Using Grid) --
         header_row = tk.Frame(table_frame, bg=CARD_COLOR)
         header_row.pack(fill="x", pady=(0, 10))
         
         for i, col in enumerate(headers):
-            # Items (index 2) gets weight 2, others weight 1
             weight = 2 if i == 2 else 1
             header_row.columnconfigure(i, weight=weight)
             
@@ -181,7 +165,6 @@ class AdminDashboard(tk.Toplevel):
 
         tk.Frame(table_frame, bg="#883333", height=2).pack(fill="x", pady=(0, 10))
 
-        # -- SCROLLABLE AREA --
         orders_area = tk.Frame(table_frame, bg=CARD_COLOR)
         orders_area.pack(fill="both", expand=True)
 
@@ -190,13 +173,10 @@ class AdminDashboard(tk.Toplevel):
         
         self.table_scrollable_frame = tk.Frame(canvas, bg=CARD_COLOR)
         
-        # --- CRITICAL FIX: Force inner frame to match canvas width ---
         self.table_window_id = canvas.create_window((0, 0), window=self.table_scrollable_frame, anchor="nw")
 
         def on_canvas_configure(event):
-            # Update scrollregion
             canvas.configure(scrollregion=canvas.bbox("all"))
-            # Force width to match canvas
             canvas.itemconfig(self.table_window_id, width=event.width)
 
         canvas.bind("<Configure>", on_canvas_configure)
@@ -222,7 +202,6 @@ class AdminDashboard(tk.Toplevel):
              tk.Label(self.table_scrollable_frame, text="No order history found.", bg=CARD_COLOR, fg="white").pack(pady=20)
              return
 
-        # -- ROWS (Using Grid to match Headers) --
         for o in orders:
             created_str = o.created_at.strftime("%b %d, %H:%M")
             items_text = ", ".join([f"{it.name}" for it in o.items])
@@ -250,9 +229,6 @@ class AdminDashboard(tk.Toplevel):
             
             tk.Frame(self.table_scrollable_frame, bg="#441111", height=1).pack(fill="x", pady=2)
 
-    # ----------------------
-    # Global Refresh Timer
-    # ----------------------
     def refresh_timer(self):
         try:
             orders = load_orders()
@@ -264,9 +240,6 @@ class AdminDashboard(tk.Toplevel):
         
         self.after(2000, self.refresh_timer)
 
-    # ----------------------
-    # Reports & Analytics Window
-    # ----------------------
     def open_reports_analytics(self, event=None):
         win = tk.Toplevel(self)
         win.title("SmartChef - Detailed Analytics")
@@ -343,9 +316,6 @@ class AdminDashboard(tk.Toplevel):
             canvas.create_text(x + bar_width/2, y_top - 10, text=str(val), fill="white", font=("Segoe UI", 10, "bold"))
             canvas.create_text(x + bar_width/2, h + 15, text=label, fill="#CCC", font=("Segoe UI", 10))
 
-    # ----------------------
-    # MENU MANAGEMENT
-    # ----------------------
     def open_menu_management(self, event=None):
         self.menu_window = tk.Toplevel(self)
         self.menu_window.title("Manage Menu Items")
@@ -405,16 +375,16 @@ class AdminDashboard(tk.Toplevel):
                     float(entries["Price"].get())
                 )
                 if any(x.id == item.id for x in self.menu_items):
-                    messagebox.showerror("Error", "ID already exists!")
+                    messagebox.showerror("Error", "ID already exists!", parent=dialog)
                     return
 
                 self.menu_items.append(item)
                 save_menu_items(self.menu_items)
                 self.load_menu_list()
                 dialog.destroy()
-                messagebox.showinfo("Success", "Item Added")
+                messagebox.showinfo("Success", "Item Added", parent=self.menu_window)
             except ValueError:
-                messagebox.showerror("Error", "Invalid Price")
+                messagebox.showerror("Error", "Invalid Price", parent=dialog)
 
         tk.Button(dialog, text="Save", command=save, bg=ACCENT_GREEN, fg="white").pack(pady=20)
 
@@ -426,11 +396,9 @@ class AdminDashboard(tk.Toplevel):
         del self.menu_items[idx]
         save_menu_items(self.menu_items)
         self.load_menu_list()
-        messagebox.showinfo("Success", "Item Removed")
+        # FIX: Parent is the Menu Management window
+        messagebox.showinfo("Success", "Item Removed", parent=self.menu_window)
 
-    # ----------------------
-    # USERS MANAGEMENT
-    # ----------------------
     def open_users_management(self, event=None):
         self.users_window = tk.Toplevel(self)
         self.users_window.title("Manage Users")
@@ -486,11 +454,11 @@ class AdminDashboard(tk.Toplevel):
             role = c_role.get()
 
             if not uname or not pword:
-                messagebox.showerror("Error", "All fields required")
+                messagebox.showerror("Error", "All fields required", parent=dialog)
                 return
 
             if any(u.get_username() == uname for u in self.users):
-                messagebox.showerror("Error", "Username taken")
+                messagebox.showerror("Error", "Username taken", parent=dialog)
                 return
 
             if role == "admin": new_u = Admin(uname, pword)
@@ -501,7 +469,7 @@ class AdminDashboard(tk.Toplevel):
             save_users(self.users)
             self.load_users_list()
             dialog.destroy()
-            messagebox.showinfo("Success", "User Added")
+            messagebox.showinfo("Success", "User Added", parent=self.users_window)
 
         tk.Button(dialog, text="Create User", command=save, bg=ACCENT_GREEN, fg="white").pack(pady=20)
 
@@ -513,7 +481,7 @@ class AdminDashboard(tk.Toplevel):
         del self.users[idx]
         save_users(self.users)
         self.load_users_list()
-        messagebox.showinfo("Success", "User Removed")
+        messagebox.showinfo("Success", "User Removed", parent=self.users_window)
 
 if __name__ == "__main__":
     root = tk.Tk()

@@ -11,7 +11,6 @@ BG_COLOR = "#2B0505"
 CARD_COLOR = "#450A0A"
 TEXT_WHITE = "#FFFFFF"
 
-# Status Colors
 STATUS_PENDING = "#FFC107"  
 STATUS_PREP = "#0D6EFD"     
 STATUS_READY = "#198754"    
@@ -31,12 +30,10 @@ class KitchenDashboard(tk.Toplevel):
         self.order_widgets = {}   
         self.last_statuses = {}   
         
-        # Header 
         self.header = tk.Frame(self, bg=BG_COLOR, height=60)
         self.header.pack(fill="x", padx=20, pady=10)
         tk.Label(self.header, text="Kitchen Display - Active Orders", font=("Segoe UI", 16, "bold"), bg=BG_COLOR, fg="#FFFFFF").pack(anchor="w")
 
-        # Grid Frame for Tickets
         self.grid_frame = tk.Frame(self, bg=BG_COLOR)
         self.grid_frame.pack(fill="both", expand=True, padx=20, pady=20)
         
@@ -46,10 +43,8 @@ class KitchenDashboard(tk.Toplevel):
         self.load_and_display_orders()
         self.start_refresh_timer()
         
-        # No binding for resizing anymore
 
     def load_background(self):
-        # CHANGED: Using BG.png and tk.PhotoImage
         bg_path = ("assets/BG.png")
         if os.path.exists(bg_path):
             try:
@@ -59,7 +54,6 @@ class KitchenDashboard(tk.Toplevel):
             except Exception as e:
                 print(f"Error loading background: {e}")
 
-    # No resize_background method needed
 
     def start_refresh_timer(self):
         self.after(1000, self.load_and_display_orders) 

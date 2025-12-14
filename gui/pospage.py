@@ -25,14 +25,11 @@ class POSDashboard(tk.Toplevel):
         self.organize_menu_data()
         self.selected_product_id = None
 
-        # --- Background (Static PNG) ---
         self.bg_photo = None
         self.bg_label = tk.Label(self, bg=BG_COLOR)
         self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
         self.load_background()
         
-        # --- Main Layout ---
-        # 1. MENU SECTION (Left)
         self.frame_menu = tk.Frame(self, bg=SECTION_BG, width=300, padx=10, pady=10)
         self.frame_menu.pack(side="left", fill="y", padx=(20, 5), pady=20)
         self.frame_menu.pack_propagate(False)
@@ -40,14 +37,17 @@ class POSDashboard(tk.Toplevel):
         self.menu_content_frame = tk.Frame(self.frame_menu, bg=SECTION_BG)
         self.menu_content_frame.pack(fill="both", expand=True)
 
+        btn_refresh = tk.Button(self.frame_menu, text="REFRESH MENU", bg="#444444", fg="white",
+                                font=("Segoe UI", 10, "bold"), relief="flat", height=2, cursor="hand2",
+                                command=self.refresh_menu)
+        btn_refresh.pack(side="bottom", fill="x", pady=(10, 0))
+
         self.build_menu_section()
 
-        # 2. CURRENT ORDER (Center)
         self.frame_order = tk.Frame(self, bg=SECTION_BG, width=450, padx=10, pady=10)
         self.frame_order.pack(side="left", fill="both", expand=True, padx=5, pady=20)
         self.build_order_section()
 
-        # 3. CHECKOUT (Right)
         self.frame_checkout = tk.Frame(self, bg=SECTION_BG, width=300, padx=20, pady=20)
         self.frame_checkout.pack(side="right", fill="y", padx=(5, 20), pady=20)
         self.frame_checkout.pack_propagate(False)
@@ -74,7 +74,15 @@ class POSDashboard(tk.Toplevel):
                 self.menu_data[cat] = []
             self.menu_data[cat].append(item)
 
-    # --- Menu Section Logic ---
+    def refresh_menu(self):
+        try:
+            self.menu_items = load_menu_items()
+            self.organize_menu_data()
+            self.build_menu_section()
+            messagebox.showinfo("Success", "Menu updated from database!", parent=self)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to refresh menu: {e}", parent=self)
+
     def clear_menu_content(self):
         for widget in self.menu_content_frame.winfo_children():
             widget.destroy()
@@ -138,7 +146,6 @@ class POSDashboard(tk.Toplevel):
         scrollable_frame.columnconfigure(0, weight=1)
         scrollable_frame.columnconfigure(1, weight=1)
 
-    # --- Order Logic ---
     def add_item_to_order(self, item):
         self.current_order.add_item(item.id, item.name, item.price, 1)
         self.refresh_order_display()
@@ -152,7 +159,7 @@ class POSDashboard(tk.Toplevel):
 
     def remove_selected_item(self):
         if not self.selected_product_id:
-            messagebox.showwarning("Selection", "Please select an item to remove.")
+            messagebox.showwarning("Selection", "Please select an item to remove.", parent=self)
             return
         
         self.current_order.remove_item(self.selected_product_id)
@@ -166,7 +173,7 @@ class POSDashboard(tk.Toplevel):
     def cancel_order(self):
         if not self.current_order.items:
             return
-        if messagebox.askyesno("Cancel Order", "Are you sure you want to clear the current order?"):
+        if messagebox.askyesno("Cancel Order", "Are you sure you want to clear the current order?", parent=self):
             self.current_order.clear_order()
             self.selected_product_id = None
             self.refresh_order_display()
@@ -174,12 +181,12 @@ class POSDashboard(tk.Toplevel):
 
     def submit_order_to_kitchen(self):
         if not self.current_order.items:
-            messagebox.showwarning("Empty Order", "Please add items to the order before sending.")
+            messagebox.showwarning("Empty Order", "Please add items to the order before sending.", parent=self)
             return
 
         table_num = self.entry_table.get().strip()
         if not table_num:
-            messagebox.showwarning("Missing Info", "Please enter a Table Number.")
+            messagebox.showwarning("Missing Info", "Please enter a Table Number.", parent=self)
             self.entry_table.focus()
             return
 
@@ -187,7 +194,8 @@ class POSDashboard(tk.Toplevel):
         self.current_order.update_status(Order.PENDING)
 
         save_order(self.current_order)
-        messagebox.showinfo("Order Sent", f"Order sent to Kitchen for Table {table_num}!")
+        # FIX: Added parent=self
+        messagebox.showinfo("Order Sent", f"Order sent to Kitchen for Table {table_num}!", parent=self)
         
         self.current_order = Order("Walk-in") 
         self.selected_product_id = None

@@ -23,7 +23,6 @@ class SmartChefApp(tk.Tk):
         self.resizable(True, True)
         self.minsize(1000, 700)
 
-        # 1. LOAD APP ICON
         icon_path = ("assets/SC.png") 
         if os.path.exists(icon_path):
             try:
@@ -60,22 +59,21 @@ class SmartChefApp(tk.Tk):
         self.bind("<Configure>", self.resize_layout)
 
     def maximize_me(self):
+        self.after(10, self._attempt_maximize)
+
+    def _attempt_maximize(self):
         try:
             self.state('zoomed') 
             return
         except tk.TclError:
             pass
+        
         try:
             self.attributes('-zoomed', True)
             return
         except tk.TclError:
             pass
-        try:
-            w = self.winfo_screenwidth()
-            h = self.winfo_screenheight()
-            self.geometry(f"{w}x{h}+0+0")
-        except:
-            self.geometry("1280x800")
+        self.geometry("1280x800")
 
     def on_closing(self):
         try:
@@ -181,6 +179,11 @@ class SmartChefApp(tk.Tk):
         if target_dashboard.state() != "withdrawn":
             target_dashboard.lift()
             target_dashboard.focus_force()
+            try:
+                target_dashboard.attributes("-topmost", True)
+                target_dashboard.attributes("-topmost", False)
+            except Exception:
+                pass
 
 if __name__ == "__main__":
     app = SmartChefApp()
