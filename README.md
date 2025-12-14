@@ -37,13 +37,13 @@ SmartChef is designed to cover the three main pillars of a modern restaurant:
 
 ## ⬇️ Installation
 
+### Executables (Recommended)
+Download the pre-built binaries from the [Releases](https://github.com/HA2077/SmartChef/releases) page:
+* **Windows:** `SmartChef-Windows.rar`
+* **Linux (Debian/Ubuntu):** `SmartChef-Linux.tar.xz`
+
 ### Prerequisites
 * Python 3.12.3
-
-### Executables (Recommended)
-Download the pre-built binaries from the [[Releases](https://github.com/HA2077/SmartChef/releases)] page:
-* **Windows:** `SmartChef.rar`
-* **Linux (Debian/Ubuntu):** `SmartChef.tar.xz`
 
 ### From Source
 1.  Clone the repository:
